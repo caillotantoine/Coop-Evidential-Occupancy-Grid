@@ -28,14 +28,6 @@ def talker():
 
     bridge = CvBridge()
 
-
-
-    
-
-
-    
-    
-
     img_msg = Img()
     
     
