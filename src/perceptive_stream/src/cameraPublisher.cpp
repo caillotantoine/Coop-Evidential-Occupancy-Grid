@@ -1,7 +1,6 @@
-#include "ros/ros.h"
-#include "std_msgs/String.h"
-
-#include <opencv2/opencv.hpp>
+#include <ros/ros.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 
 
@@ -10,27 +9,34 @@
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "Camera_Publisher");
-
     ros::NodeHandle n;
 
-    ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
+    image_transport::ImageTransport img_trans(n);
+    image_transport::Publisher pub = img_trans.advertise("camera/image", 5);
+    ros::Publisher camInfo_pub = n.advertise<sensor_msgs::CameraInfo>("camrea/info", 5);
+
     ros::Rate loop_rate(20);
+
+
+    cv::Mat img;
+    sensor_msgs::ImagePtr img_msg;
+
+    img = cv::imread(argv[1]);
+
 
     int count = 0;
 
     while(ros::ok()) 
     {
-        std_msgs::String msg;
+        if(!img.empty()){
+            img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+            pub.publish(img_msg);
+            ROS_INFO("Showing %s", argv[1]);
+        }
 
-        std::stringstream ss;
-        ss << "Hello world " << count << " " << argv[1];
-        msg.data = ss.str();
+        
 
-        ROS_INFO("%s", msg.data.c_str());
-
-        chatter_pub.publish(msg);
         ros::spinOnce();
-
         loop_rate.sleep();
         count++;
     }
