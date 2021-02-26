@@ -1,0 +1,10 @@
+<launch>
+    <!-- Global parameters -->
+    <param name="starting" type="int" value="47"/>
+
+    <!-- Nodes -->
+    <node pkg="perceptive_stream" type="gndTruthCAR.py" name="gnd_truth_car0" output="screen">
+        <param name="json_path" value="/home/caillot/Bureau/Dataset_Test_1/Embed/V0/VehicleInfo/%06d.json"/>
+        <param name="vehicle_ID" value="V0"/>
+    </node>
+</launch>

@@ -30,6 +30,7 @@ def talker(camera_folder="/", info_folder="/", starting=0, sensor_ID="camera"):
     rospy.init_node('Camera_Publisher', anonymous=True)
     rate = rospy.Rate(20)
 
+    rospy.loginfo("Start streaming")
     while not rospy.is_shutdown():
         hello_str = "Hello world %s" % rospy.get_time()
         
@@ -64,14 +65,16 @@ def talker(camera_folder="/", info_folder="/", starting=0, sensor_ID="camera"):
             img = cv.imread(imagePath)
             img_msg.image = bridge.cv2_to_imgmsg(img, "bgr8")
 
-            # rospy.loginfo(hello_str)
-            #rospy.loginfo("\n%s\n%s\n%s\n%s"%(np.array2string(cameraMatrix), imagePath, camera_Tr, camera_R))
+            # time to the ros server
+            img_msg.header.stamp = rospy.get_rostime()
+            img_msg.header.frame_id = "%s_%d"%(sensor_ID, starting+cnt)
             pub.publish(img_msg)
+            rate.sleep()
+
             cnt = cnt + 1
         else:
             cnt = 0
-            rospy.loginfo("One of the following path doesn't exists. setting cnt to 0.\n\tPath 1: %s\n\tPath 2: %s"%(imagePath, jsonPath))
-        rate.sleep()
+            
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description=__doc__)

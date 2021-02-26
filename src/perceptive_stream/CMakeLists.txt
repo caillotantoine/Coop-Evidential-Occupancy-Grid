@@ -19,6 +19,7 @@ add_message_files(
   FILES
   Num.msg
   Img.msg
+  BBox3D.msg
 )
 
 generate_messages(
@@ -42,5 +43,9 @@ target_link_libraries(cameraPublisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 add_dependencies(cameraPublisher perceptive_stream_generate_messages_cpp)
 
 catkin_install_python(PROGRAMS scripts/readCamStream.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+catkin_install_python(PROGRAMS scripts/gndTruthCAR.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
