@@ -52,12 +52,22 @@ def talker():
             vehicle.position.z = vehicle_t.flatten()[2]
 
             vehicle_r = vehicleT[:3, :3]
-            # In worlds coordinates, only yaw axis is used (otherwise this is called "an accident")
-            theta = -np.arcsin(vehicle_r[2, 0])
-            theta = np.pi - theta if abs(np.cos(theta) - 0.0) < 0.01 else theta
-            yaw = np.arctan2(vehicle_r[1,0]/np.cos(theta), vehicle_r[0,0]/np.cos(theta))
-            rospy.loginfo("Yaw : %f°" % np.degrees(yaw))
-            vehicle_R = Quaternion(axis=[0.0, 0.0, 1.0], radians=yaw)
+
+            # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
+            Ry = -np.arcsin(vehicle_r[2, 0])
+            Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
+            Rz = np.arctan2(vehicle_r[1,0]/np.cos(Ry), vehicle_r[0,0]/np.cos(Ry))
+            Rx = np.arctan2(vehicle_r[2,1]/np.cos(Ry), vehicle_r[2,2]/np.cos(Ry))
+
+            # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
+
+            Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
+            Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
+            Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
+
+            vehicle_R = Qx * Qy * Qz
+            # rospy.loginfo(vehicle_R.degrees)
+
             vehicle.orientation.w = vehicle_R.w
             vehicle.orientation.x = vehicle_R.x
             vehicle.orientation.y = vehicle_R.y
