@@ -10,7 +10,7 @@ import numpy as np
 
 def talker():
     bbox_msg = BBox3D()
-    cnt = 0
+    cnt = 125
 
     rospy.init_node('carGNDtruth_Publisher', anonymous=True)
     path_to_json = rospy.get_param('~json_path')
@@ -47,19 +47,17 @@ def talker():
             vehicle = Pose()
             vehicleT = np.array(data['vehicle']['T_Mat'])
             vehicle_t = vehicleT[:3, 3:4]
-            vehicle_R = Quaternion(matrix=vehicleT[:3, :3])
-            rospy.loginfo("Matrix : \n%s" % np.array2string(vehicleT[:3, :3]))
-
-            #ERROR HERE
-            # raise ValueError("Matrix must be orthogonal, i.e. its transpose should be its inverse")
-            # ValueError: Matrix must be orthogonal, i.e. its transpose should be its inverse
-            # [[ 1.24623828e-01  9.92203772e-01 -7.31891254e-04]
-            #  [-9.92204070e-01  1.24623813e-01 -5.81667591e-05]
-            #  [ 3.34978067e-05  7.33434455e-04  9.99999702e-01]]
-
             vehicle.position.x = vehicle_t.flatten()[0]
             vehicle.position.y = vehicle_t.flatten()[1]
             vehicle.position.z = vehicle_t.flatten()[2]
+
+            vehicle_r = vehicleT[:3, :3]
+            # In worlds coordinates, only yaw axis is used (otherwise this is called "an accident")
+            theta = -np.arcsin(vehicle_r[2, 0])
+            theta = np.pi - theta if abs(np.cos(theta) - 0.0) < 0.01 else theta
+            yaw = np.arctan2(vehicle_r[1,0]/np.cos(theta), vehicle_r[0,0]/np.cos(theta))
+            rospy.loginfo("Yaw : %f°" % np.degrees(yaw))
+            vehicle_R = Quaternion(axis=[0.0, 0.0, 1.0], radians=yaw)
             vehicle.orientation.w = vehicle_R.w
             vehicle.orientation.x = vehicle_R.x
             vehicle.orientation.y = vehicle_R.y
