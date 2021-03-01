@@ -29,7 +29,7 @@ def talker():
     rospy.loginfo('Start streaming')
     while not rospy.is_shutdown():
         jpath = path_to_json % (starting_point+cnt)
-        rospy.loginfo("Trying : %s"%jpath)
+        # rospy.loginfo("Trying : %s"%jpath)
         if path.exists(jpath):
             with open(jpath) as f:
                 data = json.load(f)
@@ -82,7 +82,7 @@ def talker():
             cnt = cnt + 1
             rate.sleep()
         else:
-            rospy.loginfo("Failed to read.")
+            rospy.loginfo("Reached cnt max : %d"%cnt)
             cnt = 0
 
 

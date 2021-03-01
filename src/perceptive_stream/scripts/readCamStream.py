@@ -19,23 +19,35 @@ import argparse
 # info  : the info about the camera (matrice K, etc..)
 # tf    : transformation camera in world
 
-def talker(camera_folder="/", info_folder="/", starting=0, sensor_ID="camera"):
-    cnt = 2000
+def talker():
+    cnt = 0
 
     bridge = CvBridge()
     img_msg = Img()
-    
     
     pub = rospy.Publisher('camera/image', Img, queue_size=10)
     rospy.init_node('Camera_Publisher', anonymous=True)
     rate = rospy.Rate(20)
 
+    path_to_npy = rospy.get_param('~npy_path')
+    path_to_json = rospy.get_param('~json_path')
+    path_to_img = rospy.get_param('~img_path')
+    starting = rospy.get_param('starting')
+    sensor_ID = rospy.get_param('~sensor_ID')
+
+    rospy.loginfo("Path to npy : %s"%path_to_npy)
+    rospy.loginfo("Path to img : %s"%path_to_img)
+    rospy.loginfo("Path to json : %s"%path_to_json)
+    rospy.loginfo("Starting point : %d"%starting)
+    rospy.loginfo("Sensor ID : %s"%sensor_ID)
+
+    cameraMatrix = np.load(path_to_npy)
+
     rospy.loginfo("Start streaming")
     while not rospy.is_shutdown():
-        hello_str = "Hello world %s" % rospy.get_time()
         
-        imagePath = '%s/%06d.png'%(camera_folder, starting+cnt)
-        jsonPath = '%s/%06d.json'%(info_folder, starting+cnt)
+        imagePath = path_to_img%(starting+cnt)
+        jsonPath = path_to_json%(starting+cnt)
 
         if path.exists(jsonPath) and path.exists(imagePath):
             # Get the Sensor's position
@@ -58,7 +70,6 @@ def talker(camera_folder="/", info_folder="/", starting=0, sensor_ID="camera"):
             img_msg.transform = camera_Tr
 
             # Get the Camera Matrix k
-            cameraMatrix = np.load('%s/cameraMatrix.npy'%camera_folder)
             img_msg.info.K = list(cameraMatrix.flatten())
 
             # Read the image
@@ -73,33 +84,13 @@ def talker(camera_folder="/", info_folder="/", starting=0, sensor_ID="camera"):
 
             cnt = cnt + 1
         else:
+            rospy.loginfo("Reached cnt max : %d"%cnt)
             cnt = 0
             
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description=__doc__)
-    argparser.add_argument(
-        '--img_folder_path',
-        help='Path to the folder from / to read the images (ex: /home/username/dataset/img/)'
-    )
-    argparser.add_argument(
-        '--json_folder_path',
-        help='Path to the folder from / to read the json files (ex: /home/username/dataset/json/)'
-    )
-    argparser.add_argument(
-        '--starting',
-        type=int,
-        help='Number of the first file with the format %%06d.ext (ex: 46)'
-    )
-    argparser.add_argument(
-        '--sensor_ID',
-        default='camera',
-        help='Sensor\'s ID to be stored in the header of the packet for each acquisition. Can be useful if several sensors stream in a single topic. (default: camera)'
-    )
-    args = argparser.parse_args()
-
     try:
-        talker(camera_folder=args.img_folder_path, info_folder=args.json_folder_path, starting=args.starting, sensor_ID=args.sensor_ID)
+        talker()
     except rospy.ROSInterruptException:
         pass
 
