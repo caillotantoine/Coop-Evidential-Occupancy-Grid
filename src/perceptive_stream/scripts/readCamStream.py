@@ -27,13 +27,15 @@ def talker():
     
     pub = rospy.Publisher('camera/image', Img, queue_size=10)
     rospy.init_node('Camera_Publisher', anonymous=True)
-    rate = rospy.Rate(20)
+    
 
     path_to_npy = rospy.get_param('~npy_path')
     path_to_json = rospy.get_param('~json_path')
     path_to_img = rospy.get_param('~img_path')
     starting = rospy.get_param('starting')
     sensor_ID = rospy.get_param('~sensor_ID')
+    rate = rospy.get_param('rate')
+    rate = rospy.Rate(rate)
 
     rospy.loginfo("Path to npy : %s"%path_to_npy)
     rospy.loginfo("Path to img : %s"%path_to_img)
@@ -78,7 +80,7 @@ def talker():
 
             # time to the ros server
             img_msg.header.stamp = rospy.get_rostime()
-            img_msg.header.frame_id = "%s_%d"%(sensor_ID, starting+cnt)
+            img_msg.header.frame_id = "%s%d"%(sensor_ID, starting+cnt)
             pub.publish(img_msg)
             rate.sleep()
 

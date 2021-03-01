@@ -10,11 +10,12 @@ import numpy as np
 
 def talker():
     bbox_msg = BBox3D()
-    cnt = 125
+    cnt = 0
 
     rospy.init_node('carGNDtruth_Publisher', anonymous=True)
     path_to_json = rospy.get_param('~json_path')
     starting_point = rospy.get_param('starting')
+    rate = rospy.get_param('rate')
     vehicle_ID = rospy.get_param('~vehicle_ID')
 
     rospy.loginfo("Path to json : %s"%path_to_json)
@@ -23,7 +24,7 @@ def talker():
 
 
     pub = rospy.Publisher('car/info', BBox3D, queue_size=10)
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(rate)
 
 
     rospy.loginfo('Start streaming')
@@ -77,6 +78,7 @@ def talker():
             bbox_msg.center = center
             bbox_msg.size = size
             bbox_msg.header.stamp = rospy.get_rostime()
+            bbox_msg.header.frame_id = "%s%d"%(vehicle_ID, starting_point+cnt)
 
             pub.publish(bbox_msg)
             cnt = cnt + 1
