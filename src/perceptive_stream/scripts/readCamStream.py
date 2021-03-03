@@ -9,7 +9,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from perceptive_stream.msg import Img
-from geometry_msgs.msg import Transform
+from geometry_msgs.msg import Pose
 import json
 from pyquaternion import Quaternion
 import argparse
@@ -60,16 +60,16 @@ def talker():
             camera_t = cameraT[:3, 3:4]
             camera_R = Quaternion(matrix=cameraT[:3, :3])
 
-            camera_Tr = Transform()
-            camera_Tr.translation.x = camera_t.flatten()[0]
-            camera_Tr.translation.y = camera_t.flatten()[1]
-            camera_Tr.translation.z = camera_t.flatten()[2]
-            camera_Tr.rotation.w = camera_R.w
-            camera_Tr.rotation.x = camera_R.x
-            camera_Tr.rotation.y = camera_R.y
-            camera_Tr.rotation.z = camera_R.z
+            camera_Tr = Pose()
+            camera_Tr.position.x = camera_t.flatten()[0]
+            camera_Tr.position.y = camera_t.flatten()[1]
+            camera_Tr.position.z = camera_t.flatten()[2]
+            camera_Tr.orientation.w = camera_R.w
+            camera_Tr.orientation.x = camera_R.x
+            camera_Tr.orientation.y = camera_R.y
+            camera_Tr.orientation.z = camera_R.z
 
-            img_msg.transform = camera_Tr
+            img_msg.pose = camera_Tr
 
             # Get the Camera Matrix k
             img_msg.info.K = list(cameraMatrix.flatten())
