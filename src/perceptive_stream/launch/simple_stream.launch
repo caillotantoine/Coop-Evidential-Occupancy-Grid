@@ -26,7 +26,14 @@
         <param name="sensor_ID" value="Infra_camRGB."/>
     </node>
 
+    <!-- <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V1_camRGB" output="screen">
+        <param name="json_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/VehicleInfo/%06d.json" />
+        <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/cameraMatrix.npy" />
+        <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/%06d.png" />
+        <param name="sensor_ID" value="V1_camRGB."/>
+    </node> -->
+
     <node pkg="perceptive_stream" type="bbox_on_img.py" name="bbox_on_img" output="screen">
-        <param name="queue_size" type="int" value="50"/>
+        <param name="queue_size" type="int" value="100"/>
     </node>
 </launch>
