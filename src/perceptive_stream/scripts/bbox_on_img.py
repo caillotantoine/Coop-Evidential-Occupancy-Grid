@@ -29,7 +29,7 @@ class QueueROSmsgs:
             if len(self.queue) > self.size: # if the list is too big:
                 deleted_data = self.queue.pop(0) # delete the oldest element
                 if self.debug:
-                    rospy.loginfo("Deleted %s" % deleted_data.frame_id)
+                    rospy.loginfo("Deleted %s" % deleted_data.header.frame_id)
                 
         finally:
             self.mutex.release()
@@ -42,7 +42,7 @@ class QueueROSmsgs:
         self.mutex.acquire()
         try:
             for idx, data in enumerate(self.queue):
-                if data.header.frame_id.find(frame_id):
+                if data.header.frame_id.find(frame_id) > -1:
                     to_ret=idx
                     break
         finally:
@@ -83,14 +83,14 @@ class BBoxProj:
         queue_size = rospy.get_param('~queue_size')
 
         # create a publisher
-        self.pub = rospy.Publisher('projector/img', Image, queue_size=queue_size)
+        self.pub = rospy.Publisher('projector/img', Image, queue_size=10)
         self.pub_mutex = Lock()
 
         # Creat an OpenCV bridge
         self.cv_bridge = CvBridge()
 
         # Create a queue for the bounding box. Used to find a matching Bbox with an image
-        self.Bbox_queue = QueueROSmsgs(10, debug=True)
+        self.Bbox_queue = QueueROSmsgs(queue_size, debug=True)
 
         rospy.Subscriber('camera/image', Img, self.callback_img)
         rospy.Subscriber('car/info', BBox3D, self.callback_bbox)
