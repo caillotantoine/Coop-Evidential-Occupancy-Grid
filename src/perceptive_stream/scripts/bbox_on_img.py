@@ -5,8 +5,8 @@ from threading import Lock
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
-
 from perceptive_stream.msg import Img, BBox3D
+
 
 class QueueROSmsgs:
 

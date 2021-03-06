@@ -45,34 +45,7 @@ def talker():
             size.y = data['vehicle']['BoundingBox']['extent']['y']
             size.z = data['vehicle']['BoundingBox']['extent']['z']
 
-            vehicle = Pose()
-            vehicleT = np.array(data['vehicle']['T_Mat'])
-            vehicle_t = vehicleT[:3, 3:4]
-            vehicle.position.x = vehicle_t.flatten()[0]
-            vehicle.position.y = vehicle_t.flatten()[1]
-            vehicle.position.z = vehicle_t.flatten()[2]
-
-            vehicle_r = vehicleT[:3, :3]
-
-            # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
-            Ry = -np.arcsin(vehicle_r[2, 0])
-            Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
-            Rz = np.arctan2(vehicle_r[1,0]/np.cos(Ry), vehicle_r[0,0]/np.cos(Ry))
-            Rx = np.arctan2(vehicle_r[2,1]/np.cos(Ry), vehicle_r[2,2]/np.cos(Ry))
-
-            # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
-
-            Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
-            Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
-            Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
-
-            vehicle_R = Qx * Qy * Qz
-            # rospy.loginfo(vehicle_R.degrees)
-
-            vehicle.orientation.w = vehicle_R.w
-            vehicle.orientation.x = vehicle_R.x
-            vehicle.orientation.y = vehicle_R.y
-            vehicle.orientation.z = vehicle_R.z
+            vehicle = Tmat2pose(data['vehicle']['T_Mat'])
 
             bbox_msg.vehicle = vehicle
             bbox_msg.center = center
@@ -88,8 +61,41 @@ def talker():
             cnt = 0
 
 
+def Tmat2pose (TMat):
+    out = Pose()
+    outT = np.array(TMat)
+    out_t = outT[:3, 3:4]
+    out.position.x = out_t.flatten()[0]
+    out.position.y = out_t.flatten()[1]
+    out.position.z = out_t.flatten()[2]
+
+    out_r = outT[:3, :3]
+
+    # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
+    Ry = -np.arcsin(out_r[2, 0])
+    Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
+    Rz = np.arctan2(out_r[1,0]/np.cos(Ry), out_r[0,0]/np.cos(Ry))
+    Rx = np.arctan2(out_r[2,1]/np.cos(Ry), out_r[2,2]/np.cos(Ry))
+
+    # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
+
+    Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
+    Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
+    Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
+    out_R = Qx * Qy * Qz
+
+    out.orientation.w = out_R.w
+    out.orientation.x = out_R.x
+    out.orientation.y = out_R.y
+    out.orientation.z = out_R.z
+
+    return out
+
+
 if __name__ == '__main__':
     try:
         talker()
     except rospy.ROSInterruptException:
         pass
+
+
