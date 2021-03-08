@@ -87,19 +87,25 @@ def Tmat2pose (TMat):
     out.position.z = out_t.flatten()[2]
 
     out_r = outT[:3, :3]
+    
+    try:
+        out_R = camera_R = Quaternion(matrix=out_r)
+    except ValueError: 
+        # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
+        Ry = -np.arcsin(out_r[2, 0])
+        Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
+        Rz = np.arctan2(out_r[1,0]/np.cos(Ry), out_r[0,0]/np.cos(Ry))
+        Rx = np.arctan2(out_r[2,1]/np.cos(Ry), out_r[2,2]/np.cos(Ry))
 
-    # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
-    Ry = -np.arcsin(out_r[2, 0])
-    Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
-    Rz = np.arctan2(out_r[1,0]/np.cos(Ry), out_r[0,0]/np.cos(Ry))
-    Rx = np.arctan2(out_r[2,1]/np.cos(Ry), out_r[2,2]/np.cos(Ry))
+        # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
 
-    # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
+        Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
+        Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
+        Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
+        out_R = Qx * Qy * Qz
 
-    Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
-    Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
-    Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
-    out_R = Qx * Qy * Qz
+
+    
 
     out.orientation.w = out_R.w
     out.orientation.x = out_R.x

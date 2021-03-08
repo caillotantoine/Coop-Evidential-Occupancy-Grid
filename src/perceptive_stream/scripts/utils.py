@@ -10,7 +10,6 @@ from geometry_msgs.msg import Pose
 
 
 def pose2Tmat(pose):
-    rospy.logwarn("HELLO BITCH")
     # get the position of the camera
     R_Q = Quaternion(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z) 
     T_mat = R_Q.transformation_matrix   # Transfromation only fitted with rotation elements
@@ -51,6 +50,5 @@ def Tmat2pose (TMat):
     return out
 
 def getTCCw():
-    rospy.logwarn("HELLO BITCH")
     return np.array([[0.0,   1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
     # matrix to change from world space to camera space 
