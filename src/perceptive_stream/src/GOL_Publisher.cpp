@@ -11,8 +11,11 @@
 #include <vector>
 #include <string>
 #include <boost/foreach.hpp>
+#include <algorithm>
 
-#include "GOL_proj.h"
+#include "opencv4/opencv2/opencv.hpp"
+#include "opencv4/opencv2/highgui/highgui.hpp"
+
 
 #define DEBUG
 
@@ -21,16 +24,22 @@
 
 using namespace Eigen;
 using namespace std;
+using namespace cv;
 
 vector<int8_t> raw_map(MAP_WIDTH * MAP_HEIGHT);
 nav_msgs::OccupancyGrid GOL;
 geometry_msgs::Pose raw_mapOrigin;
 ros::Publisher pub;
 
+Mat out_img;
+
+vector<string> vehicle_history;
+
 void bbox_rx_callback(const perceptive_stream::BBox3D::ConstPtr& bbox);
 
 int main(int argc, char** argv)
 {
+
     ros::init(argc, argv, "GOL_Publisher");
     ros::NodeHandle handler_TX;
     ros::NodeHandle handler_RX;
@@ -55,7 +64,9 @@ int main(int argc, char** argv)
     GOL.data = raw_map;
     ROS_INFO("Map generation completed.");
 
+    // namedWindow("GOLViz", 1);
     ros::spin();
+    // waitKey(0);
     return 0;
 }
 
@@ -64,6 +75,15 @@ void bbox_rx_callback(const perceptive_stream::BBox3D::ConstPtr& bbox)
 {
     ROS_INFO("Received BBox : %s", bbox->header.frame_id.c_str());
     stringstream debug;
+
+    string v_id = bbox->header.frame_id.substr(0, bbox->header.frame_id.find("."));
+    if(find(vehicle_history.begin(), vehicle_history.end(), v_id) != vehicle_history.end())
+    {
+        ROS_INFO(v_id.c_str());
+        vehicle_history.clear();
+        out_img = Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC1);
+    }
+    vehicle_history.push_back(v_id);
 
     double l = bbox->size.x;
     double w = bbox->size.y;
@@ -107,72 +127,49 @@ void bbox_rx_callback(const perceptive_stream::BBox3D::ConstPtr& bbox)
     ROS_INFO_ONCE(debug.str().c_str());
 #endif
 
-    vector<Vector4d> new_bbox_corners;
-    double x_min = 100, x_max = -100, y_min = 100, y_max = -100; //ROI limits TBD
+    vector<Vector2i> new_bbox_corners;
 
-    // 
-    //      RASTERISATION
-    //          On definie la zone dans laquel se trouve les points (via les min et les max de X et Y)
-    //          à partir des points: on creer des equations de droites pour faire les conditions sur la présence des points
-    //          on tire des points sur le centre de chaques cases et on regarde si on est dans la forme ou pas. 
-    //          (on pourra tirer plusieurs points, au quatres coins par exemple, pour faire varier l'intensité)
-    //
-    
+    cv::Point pts2draw[1][30];
+    int cnt = 0;
     BOOST_FOREACH(Vector4d pt, bbox_corners)
     {
         Vector4d out;
-        out = vehicle_pos * bbox_center * pt;       // projette le point dans le repère monde
+        // out = vehicle_pos * bbox_center * pt;       // projette le point dans le repère monde
+        out = vehicle_pos * pt;
 
-        // fenetre d'interêt pour ne pas faire toutes les cases
-        if(out[0] < x_min)
-            x_min = out[0];
-        if(out[0] > x_max)
-            x_max = out[0];
-        if(out[1] < y_min)
-            y_min = out[1];
-        if(out[1] > y_max)
-            y_max = out[1];
+        // On passe de metrique au systeme de la grille d'occupation.
+        Vector4d out_rGO = (1.0 / GOL.info.resolution) * out;
+        Vector2i out_rGO_i;
+        out_rGO_i << (int) -out_rGO[0] + MAP_WIDTH/2, (int) out_rGO[1] + MAP_HEIGHT / 2;
 
-        new_bbox_corners.push_back(out);
+        // new_bbox_corners.push_back(out_rGO_i);
+        if (cnt < 30)
+        {
+            pts2draw[0][cnt] = cv::Point(out_rGO_i[0], out_rGO_i[1]);
+            cnt++;
+        }
 #ifdef DEBUG
         flush(debug);
-        debug << "Point : \n" << out << endl;
+        debug << "Point : \n" << out << endl << out_rGO_i << endl;
         ROS_INFO_ONCE(debug.str().c_str());
 #endif
     }
 
-    vector<line2D> object_boundaries;
-    for(int i = 0; i < new_bbox_corners.size(); i++)
+    const cv::Point* ptset[1] = {pts2draw[0]};
+
+    int npts[] = {cnt};
+    cv::fillPoly(out_img, ptset, npts, 1, cv::Scalar(100), cv::LINE_8);
+    // stringstream filename;
+    // filename << "/home/caillot/testIMG/carGOL_" << bbox->header.frame_id << ".png";
+    // cv::imwrite(filename.str().c_str(), out_img);
+    // cv::imshow("GOLViz", out_img);
+
+    if(out_img.isContinuous())
     {
-        Vector4d A, B, C;
-        line2D l;
-        A = new_bbox_corners[i];
-        B = new_bbox_corners[(i+1)%new_bbox_corners.size()];
-
-        if(abs(A[0] - B[0]) <= 0.001) // check if vertical
-        {
-            l.vertical = true;
-            l.a = A[0];
-            l.b = 0;
-            continue;
-        }
-        l.vertical = false;
-
-        if(A[0] > B[0])
-        {
-            C = A;
-            A = B;
-            B = C;
-        }
-
-        l.a = (B[1] - A[1]) / (B[0] - A[0]);
-        l.b = A[1] - (l.a * A[0]); //check if correct
-
-        // create a set of lines
-        object_boundaries.push_back(l);
+        raw_map.assign(out_img.data, out_img.data + out_img.total());
     }
 
-    // https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/
+    GOL.data = raw_map;
 
     pub.publish(GOL);
 }

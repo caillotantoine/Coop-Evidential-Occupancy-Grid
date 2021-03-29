@@ -1,0 +1,18 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/caillot/Documents/Thèse/Projets/upstream-coop-loc/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/caillot/Documents/Thèse/Projets/upstream-coop-loc/src/perceptive_stream/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
