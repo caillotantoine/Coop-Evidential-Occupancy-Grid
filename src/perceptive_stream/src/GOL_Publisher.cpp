@@ -17,7 +17,7 @@
 #include "opencv4/opencv2/highgui/highgui.hpp"
 
 
-#define DEBUG
+// #define DEBUG
 
 #define MAP_WIDTH 800
 #define MAP_HEIGHT 800

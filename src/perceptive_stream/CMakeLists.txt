@@ -46,9 +46,9 @@ add_executable(cameraPublisher src/cameraPublisher.cpp)
 target_link_libraries(cameraPublisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen3_LIBRARIES})
 add_dependencies(cameraPublisher perceptive_stream_generate_messages_cpp)
 
-add_executable(GOL_Publisher src/GOL_Publisher.cpp)
-target_link_libraries(GOL_Publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen3_LIBRARIES})
-add_dependencies(GOL_Publisher perceptive_stream_generate_messages_cpp)
+add_executable(GOL_PublisherOld src/GOL_Publisher.cpp)
+target_link_libraries(GOL_PublisherOld ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${Eigen3_LIBRARIES})
+add_dependencies(GOL_PublisherOld perceptive_stream_generate_messages_cpp)
 
 catkin_install_python(PROGRAMS scripts/readCamStream.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -58,9 +58,10 @@ catkin_install_python(PROGRAMS scripts/gndTruthCAR.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-catkin_install_python(PROGRAMS scripts/bbox_on_img.py scripts/utils.py
+catkin_install_python(PROGRAMS scripts/bbox_on_img.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
 
 # catkin_install_python(PROGRAMS scripts/utils.py
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
