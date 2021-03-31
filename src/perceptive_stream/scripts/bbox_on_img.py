@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# coding: utf-8
+
 import rospy
 import numpy as np
 import cv2 as cv
@@ -7,71 +10,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D
 
-# from utils import getTCCw, pose2Tmat
-
-
-class QueueROSmsgs:
-
-    # size : size of the queue
-    # queue : the list of data
-    # mutex : protection in case of multiple call
-    # debug : do we display the logs?
-
-
-    def __init__(self, size, debug=False):
-        self.size = size
-        self.queue = []
-        self.mutex = Lock()
-        self.debug = debug
-
-    def add(self, e):
-        self.mutex.acquire()
-        try:
-            self.queue.append(e) # and an element at the top of the list
-            if len(self.queue) > self.size: # if the list is too big:
-                deleted_data = self.queue.pop(0) # delete the oldest element
-                if self.debug:
-                    rospy.loginfo("Deleted %s" % deleted_data.header.frame_id)
-                
-        finally:
-            self.mutex.release()
-
-    def searchFirst(self, frame_id):
-        # Search the first element with a frame ID containing the string frame_id 
-        # return the index in the list if found
-        # return -1 otherwise
-        to_ret = -1
-        self.mutex.acquire()
-        try:
-            for idx, data in enumerate(self.queue):
-                if data.header.frame_id.find(frame_id) > -1:
-                    to_ret=idx
-                    break
-        finally:
-            self.mutex.release()
-        return to_ret
-
-
-    def popAllPerv(self, queue_idx):
-        # return the element at the given index and trash it from the list
-        # trash every older element 
-        self.mutex.acquire()
-        try:
-            to_ret = self.queue.pop(queue_idx)
-            self.queue.pop([x for x in range(queue_idx)])
-        finally:
-            self.mutex.release()
-        return to_ret
-
-    def pop(self, idx=0):
-        # return the element at the given index and trash it from the list
-        self.mutex.acquire()
-        try:
-            to_ret = self.queue.pop(idx)
-        finally:
-            self.mutex.release()
-        return to_ret
-
+from utilsant import QueueROSmsgs, getTCCw, pose2Tmat
 
 class BBoxProj:
 
@@ -232,20 +171,6 @@ class BBoxProj:
             vertex[idx] = np.matmul(T_WV, v)
 
         return vertex
-
-def pose2Tmat(pose):
-    # get the position of the camera
-    R_Q = Quaternion(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z) 
-    T_mat = R_Q.transformation_matrix   # Transfromation only fitted with rotation elements
-    T_mat[0][3] = pose.position.x   # Adding the translation elements
-    T_mat[1][3] = pose.position.y
-    T_mat[2][3] = pose.position.z
-    return T_mat
-
-def getTCCw():
-    return np.array([[0.0,   1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
-    # matrix to change from world space to camera space 
-
 
 
 if __name__ == '__main__':

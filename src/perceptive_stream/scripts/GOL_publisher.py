@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 # input:
@@ -12,3 +12,4 @@ import rospy
 import numpy as np
 import utilsant as toto
 
+print(toto.getTCCw())
