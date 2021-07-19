@@ -32,7 +32,7 @@ class BBoxProj:
         # create a publisher
         self.pub = rospy.Publisher('projector/img', Image, queue_size=10)
         self.pub_mutex = Lock()
-        # self.pub_bbox = rospy.Publisher('projector/bbox2d', BBox2D, queue_size=10)
+        self.pub_bbox = rospy.Publisher('projector/bbox2d', BBox2D, queue_size=10)
         # self.pub_bbox_mutex = Lock()
 
         # Creat an OpenCV bridge
@@ -83,6 +83,8 @@ class BBoxProj:
         self.pub_mutex.acquire()        # Is it mendatory?
         try:
             self.pub.publish(img_msg) # publish
+            if len(listOfBBox) > 0:
+                self.pub_bbox.publish(bbox2D)
         finally:
             self.pub_mutex.release()
         rospy.loginfo("End process img : %s", img_id)
