@@ -20,7 +20,7 @@ def pose2Tmat(pose):
     return T_mat
 
 
-def Tmat2pose (TMat):
+def Tmat2pose (TMat, changeHandLeft2Right = False):
     out = Pose()
     outT = np.array(TMat)
     out_t = outT[:3, 3:4]
@@ -28,29 +28,24 @@ def Tmat2pose (TMat):
     out.position.y = out_t.flatten()[1]
     out.position.z = out_t.flatten()[2]
 
-    out_r = outT[:3, :3]
+    r = R.from_dcm(outT[:3, :3])
+    r_euler = R.as_euler(r, 'xyz')
 
-    # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
-    Ry = -np.arcsin(out_r[2, 0])
-    Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
-    Rz = np.arctan2(out_r[1,0]/np.cos(Ry), out_r[0,0]/np.cos(Ry))
-    Rx = np.arctan2(out_r[2,1]/np.cos(Ry), out_r[2,2]/np.cos(Ry))
+    if changeHandLeft2Right:
+        # Code de Yohan pour le changement de main
+        out.position.y = -out.position.y
+        r_euler[0]=- r_euler[0]
+        r_euler[2]=- r_euler[2]
 
-    # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
-
-    Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
-    Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
-    Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
-    out_R = Qx * Qy * Qz
-
-    out.orientation.w = out_R.w
-    out.orientation.x = out_R.x
-    out.orientation.y = out_R.y
-    out.orientation.z = out_R.z
+    r_out = R.from_euler('xyz', r_euler).as_quat() # Format: X Y Z W
+    out.orientation.w = r_out[3]
+    out.orientation.x = r_out[0]
+    out.orientation.y = r_out[1]
+    out.orientation.z = r_out[2]
 
     return out
 
 def getTCCw():
-    return np.array([[0.0,   1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
+    return np.array([[0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
     # matrix to change from world space to camera space 
 
