@@ -79,6 +79,8 @@ class BBoxManager:
             bbox_vert_world = self.placeBBoxInWorld(bbox) # place the 8 corner of the box in the world
             (bbox_vert2D_cam, roi, valid) = self.compute2Dbbox(image, bbox_vert_world)
 
+            # rospy.loginfo("Valid bbox: {}".format(valid))
+
 
             if len(bbox_vert2D_cam) > 0:
                 setOfBbox.append(roi)
@@ -86,7 +88,7 @@ class BBoxManager:
             for i in range(len(bbox_vert2D_cam)):
                 cv_img = cv.line(cv_img, bbox_vert2D_cam[i], bbox_vert2D_cam[(i+1)%len(bbox_vert2D_cam)], color, thickness)
 
-        bbox_out = BBox2D
+        bbox_out = BBox2D()
         bbox_out.header = image.header
         bbox_out.cam_info = image.info
         bbox_out.cam_pose = image.pose
@@ -163,7 +165,7 @@ class BBoxManager:
 
         is_on_image = is_on_image and valid_lim
 
-        roi = RegionOfInterest
+        roi = RegionOfInterest()
         roi.x_offset = x_min
         roi.y_offset = y_min
         roi.height = y_max - y_min
