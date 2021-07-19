@@ -81,12 +81,12 @@ class BBoxManager:
 
             # rospy.loginfo("Valid bbox: {}".format(valid))
 
+            if valid:
+                if len(bbox_vert2D_cam) > 0:
+                    setOfBbox.append(roi)
 
-            if len(bbox_vert2D_cam) > 0:
-                setOfBbox.append(roi)
-
-            for i in range(len(bbox_vert2D_cam)):
-                cv_img = cv.line(cv_img, bbox_vert2D_cam[i], bbox_vert2D_cam[(i+1)%len(bbox_vert2D_cam)], color, thickness)
+                for i in range(len(bbox_vert2D_cam)):
+                    cv_img = cv.line(cv_img, bbox_vert2D_cam[i], bbox_vert2D_cam[(i+1)%len(bbox_vert2D_cam)], color, thickness)
 
         bbox_out = BBox2D()
         bbox_out.header = image.header
