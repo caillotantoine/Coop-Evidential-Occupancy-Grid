@@ -12,10 +12,10 @@ import rospy
 import numpy as np
 import cv2 as cv
 from threading import Lock
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, RegionOfInterest
 from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
-from perceptive_stream.msg import Img, BBox3D
+from perceptive_stream.msg import Img, BBox3D, BBox2D
 
 from bbox_manager import BBoxManager
 from queue_manager import QueueROSmsgs
@@ -32,6 +32,8 @@ class BBoxProj:
         # create a publisher
         self.pub = rospy.Publisher('projector/img', Image, queue_size=10)
         self.pub_mutex = Lock()
+        # self.pub_bbox = rospy.Publisher('projector/bbox2d', BBox2D, queue_size=10)
+        # self.pub_bbox_mutex = Lock()
 
         # Creat an OpenCV bridge
         self.cv_bridge = CvBridge()
@@ -68,11 +70,10 @@ class BBoxProj:
             # img_msg = self.drawBoxes(data, listOfBBox)
             (img_msg, bbox2D) = self.bboxMgr.draw2DBoxes(data, listOfBBox)
             for bbox in listOfBBox:
-                rospy.loginfo("position : X %3.2fm \tY %3.2fm"%(bbox.vehicle.position.x, bbox.vehicle.position.y))
-            for bbox in bbox2D:
+                rospy.loginfo("position : X %3.2fm   \tY %3.2fm"%(bbox.vehicle.position.x, bbox.vehicle.position.y))
+            for bbox in bbox2D.roi:
                 rospy.loginfo("BBox : ")
-                for bbox_pt in bbox:
-                    rospy.loginfo("    x: %d  y: %d"%(bbox_pt[0], bbox_pt[1]))
+                rospy.loginfo("    x: %d  y: %d  w: %d  h: %d"%(bbox.x_offset, bbox.y_offset, bbox.width, bbox.height))
         else:
             # if there is no bounding box, just pipe the image
             img_msg = data.image
@@ -84,6 +85,7 @@ class BBoxProj:
             self.pub.publish(img_msg) # publish
         finally:
             self.pub_mutex.release()
+        rospy.loginfo("End process img : %s", img_id)
 
     def callback_bbox(self, data):
         self.Bbox_queue.add(data) # just add the read bounding box to the queue

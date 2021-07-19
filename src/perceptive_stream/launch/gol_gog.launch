@@ -1,7 +1,7 @@
 <launch>
     <!-- Global parameters -->
     <param name="starting" type="int" value="60"/>
-    <param name="rate" type="int" value="20"/>
+    <param name="rate" type="int" value="5"/>
 
     <!-- Nodes -->
     <node pkg="perceptive_stream" type="gndTruthCAR.py" name="gnd_truth_car0" output="screen">

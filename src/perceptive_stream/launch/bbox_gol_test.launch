@@ -1,3 +1,5 @@
+<!-- OLD, Do not use -->
+
 <launch>
     <!-- Global parameters -->
     <param name="starting" type="int" value="60"/>
@@ -19,5 +21,5 @@
         <param name="vehicle_ID" value="V2_info."/>
     </node>
 
-    <node pkg="perceptive_stream" type="GOL_Publisher" name="GOL_Publisher" output="screen" />
+    <node pkg="perceptive_stream" type="GOL_Publisher.py" name="GOL_Publisher" output="screen" />
 </launch>
