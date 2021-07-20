@@ -20,13 +20,13 @@ from perceptive_stream.msg import Img, BBox3D, BBox2D
 from bbox_manager import BBoxManager
 from queue_manager import QueueROSmsgs
 
-class BBoxProj:
+class BBoxExtractor:
     #pub : the publisher
     #pub_mutex : the mutex to avoid publishing in the same time. 
 
     def __init__(self):
         # init ROS 
-        rospy.init_node("bbox_reproj", anonymous=True)
+        rospy.init_node("bbox_extractor", anonymous=True)
         queue_size = rospy.get_param('~queue_size')
 
         # create a publisher
@@ -94,4 +94,4 @@ class BBoxProj:
 
 
 if __name__ == '__main__':
-    proj_node = BBoxProj()
+    proj_node = BBoxExtractor()

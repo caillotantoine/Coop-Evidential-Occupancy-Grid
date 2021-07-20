@@ -33,7 +33,11 @@
         <param name="sensor_ID" value="V1_camRGB."/>
     </node>
 
-    <node pkg="perceptive_stream" type="GOL_publisher.py" name="GOL_publisher" output="screen">
+    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher" output="screen">
+        <param name="queue_size" type="int" value="100"/>
+    </node>
+
+    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol" output="screen">
         <param name="queue_size" type="int" value="100"/>
     </node>
 </launch>
