@@ -81,7 +81,7 @@ class BBoxManager:
 
             # rospy.loginfo("Valid bbox: {}".format(valid))
 
-            if valid:
+            if valid and int(roi.x_offset) > 0 and int(roi.y_offset) > 0:
                 if len(bbox_vert2D_cam) > 0:
                     setOfBbox.append(roi)
 

@@ -15,7 +15,6 @@ from sensor_msgs.msg import CameraInfo, RegionOfInterest
 from perceptive_stream.msg import BBox2D
 
 map_size = 70
-vis = o3d.visualization.Visualizer()
 mesh_world_center = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
 
 
@@ -23,8 +22,10 @@ class BBox2D_Proj:
     def __init__(self):
         rospy.init_node("bbox_to_gol", anonymous=True)
         rospy.Subscriber('projector/bbox2d', BBox2D, self.callback_bbox)
-        
-        vis.create_window()
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window(window_name='Open3D', width=800, height=600, left=50, top=50, visible=True)
+
         self.is_modified = True
         self.list_geometries = []
         self.mutex_geometries = Lock()
@@ -33,7 +34,6 @@ class BBox2D_Proj:
 
         (line_setX, line_setY) = self.create_ground_grid()
 
-        vis.clear_geometries()
         vis.add_geometry(mesh_world_center)
         vis.add_geometry(line_setX)
         vis.add_geometry(line_setY)
@@ -52,10 +52,12 @@ class BBox2D_Proj:
                 modif = False
                 for geo in geometries:
                     vis.remove_geometry(geo)
+                    pass
                 geometries.clear()
                 geometries = new_geometries
                 for geo in geometries:
                     vis.add_geometry(geo)
+                    pass
 
             vis.poll_events()
             vis.update_renderer()
@@ -67,6 +69,7 @@ class BBox2D_Proj:
         try:
             self.is_modified = True
             self.list_geometries = proj.get_geometries()
+            pass
         finally:
             self.mutex_geometries.release()
         # o3d.visualization.draw()
