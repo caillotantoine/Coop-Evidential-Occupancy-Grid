@@ -10,8 +10,9 @@ from threading import Lock
 from scipy.spatial.transform import Rotation as R
 from utils import plucker 
 import copy
+from nav_msgs.msg import OccupancyGrid
 
-from sensor_msgs.msg import CameraInfo, RegionOfInterest
+# from sensor_msgs.msg import CameraInfo, RegionOfInterest
 from perceptive_stream.msg import BBox2D
 
 map_size = 70
@@ -22,6 +23,7 @@ class BBox2D_Proj:
     def __init__(self):
         rospy.init_node("bbox_to_gol", anonymous=True)
         rospy.Subscriber('projector/bbox2d', BBox2D, self.callback_bbox)
+        self.go_pub = rospy.Publisher('projector/GOL', OccupancyGrid, queue_size=10)
 
         vis = o3d.visualization.Visualizer()
         vis.create_window(window_name='Open3D', width=800, height=600, left=50, top=50, visible=True)
@@ -72,8 +74,8 @@ class BBox2D_Proj:
             pass
         finally:
             self.mutex_geometries.release()
-        # o3d.visualization.draw()
-        # rospy.logwarn("Test")
+        
+        self.go_pub.publish(proj.get_occupGrid())
 
 
     def create_ground_grid(self):

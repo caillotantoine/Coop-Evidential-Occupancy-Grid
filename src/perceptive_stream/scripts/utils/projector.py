@@ -11,6 +11,9 @@ from utils.utilsant import pose2Tmat, getTCCw
 from utils.vecMatUtils import *
 from utils import plucker
 import numpy as np
+import cv2
+
+from nav_msgs.msg import OccupancyGrid
 
 class Projector:
 
@@ -19,9 +22,14 @@ class Projector:
     #   cam_pos_mat : 4x4 transform matrix
     #   K : camera matrix
     #   gnd_plane : Plucker's coordinates systeme based ground plane
-    #   
+    #   worked_ROI : table of tuple (pts_bbox, footprint_pts)
+    #       pts_bbox : 
+    #       footprint_pts : 
 
-    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0))):
+    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0)), step_grid = 0.1, grid_range = 75):
+        self.step_grid = step_grid
+        self.grid_range = grid_range
+        self.grid_size = int(2*self.grid_range/self.step_grid)
         self.cam_pos_mat = pose2Tmat(bboxes.cam_pose) # get the camera position in the world
         self.cam_pos_mat = np.matmul(self.cam_pos_mat, np.linalg.inv(getTCCw())) # apply transformation of axis to get a transformation image -> world
         self.K = np.reshape(np.array(bboxes.cam_info.K), (3, 3)) # get the camera matrix
@@ -102,3 +110,39 @@ class Projector:
 
             meshes.append(lineset_bbox_fp)
         return meshes
+    
+    def get_occupGrid(self):
+        rawGOL = OccupancyGrid()
+        rawGOL.info.resolution = self.step_grid
+        rawGOL.info.width = self.grid_size
+        rawGOL.info.height = self.grid_size
+
+        GOL_origin = Pose()
+        GOL_origin.position.x = - (self.grid_size * self.step_grid / 2.0)
+        GOL_origin.position.y = - (self.grid_size * self.step_grid / 2.0)
+        GOL_origin.position.z = 0
+
+        rawGOL.info.origin = GOL_origin
+
+        raw_map = np.full((self.grid_size, self.grid_size), -1, dtype=np.int8)
+        # raw_map = np.zeros((self.grid_size, self.grid_size), dtype=np.int8)
+        # rospy.logwarn("map size : {}".format(self.grid_size))
+
+        for roi in self.worked_ROI:
+            (pts_bbox, footprint_pts) = roi
+            pts = []
+            for pt in footprint_pts:
+                x = int(pt[0][0] / self.step_grid + (self.grid_size / 2.0))
+                y = int(pt[1][0] / self.step_grid + (self.grid_size / 2.0))
+                pts.append([x, y])
+            rospy.logwarn("footprint \n{}".format(np.array(pts)))
+            cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
+
+
+
+
+        rawGOL.data = raw_map.flatten().tolist()
+
+        return rawGOL
+
+

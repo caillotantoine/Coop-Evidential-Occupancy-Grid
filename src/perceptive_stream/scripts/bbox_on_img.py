@@ -10,7 +10,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D
 
-from bbox_manager import BBoxProj
+from utils.bbox_manager import BBoxProj
 
 
 if __name__ == '__main__':

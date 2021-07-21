@@ -17,8 +17,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D, BBox2D
 
-from bbox_manager import BBoxManager
-from queue_manager import QueueROSmsgs
+from utils.bbox_manager import BBoxManager
+from utils.queue_manager import QueueROSmsgs
 
 class BBoxExtractor:
     #pub : the publisher
