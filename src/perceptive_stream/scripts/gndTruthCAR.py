@@ -11,6 +11,8 @@ from geometry_msgs.msg import Pose, Vector3
 from pyquaternion import Quaternion
 import numpy as np
 
+from utils.utilsant import getTCCw, pose2Tmat, Tmat2pose
+
 def talker():
     bbox_msg = BBox3D()
     cnt = 0
@@ -48,7 +50,7 @@ def talker():
             size.y = data['vehicle']['BoundingBox']['extent']['y']
             size.z = data['vehicle']['BoundingBox']['extent']['z']
 
-            vehicle = Tmat2pose(data['vehicle']['T_Mat'])
+            vehicle = Tmat2pose(data['vehicle']['T_Mat'], changeHandLeft2Right=True)
 
             bbox_msg.vehicle = vehicle
             bbox_msg.center = center
@@ -62,37 +64,6 @@ def talker():
         else:
             rospy.loginfo("Reached cnt max : %d"%cnt)
             cnt = 0
-
-
-def Tmat2pose (TMat):
-    out = Pose()
-    outT = np.array(TMat)
-    out_t = outT[:3, 3:4]
-    out.position.x = out_t.flatten()[0]
-    out.position.y = out_t.flatten()[1]
-    out.position.z = out_t.flatten()[2]
-
-    out_r = outT[:3, :3]
-
-    # T_Mat only contains pure rotation and traslation. Therefore we filter the float approx.
-    Ry = -np.arcsin(out_r[2, 0])
-    Ry = np.pi - Ry if abs(np.cos(Ry) - 0.0) < 0.01 else Ry
-    Rz = np.arctan2(out_r[1,0]/np.cos(Ry), out_r[0,0]/np.cos(Ry))
-    Rx = np.arctan2(out_r[2,1]/np.cos(Ry), out_r[2,2]/np.cos(Ry))
-
-    # rospy.loginfo("R[x, y, z] : %f°, %f°, %f°" % (np.degrees(Rx),np.degrees(Ry),np.degrees(Rz)))
-
-    Qx = Quaternion(axis=[1.0, 0.0, 0.0], radians=Rx)
-    Qy = Quaternion(axis=[0.0, 1.0, 0.0], radians=Ry)
-    Qz = Quaternion(axis=[0.0, 0.0, 1.0], radians=Rz)
-    out_R = Qx * Qy * Qz
-
-    out.orientation.w = out_R.w
-    out.orientation.x = out_R.x
-    out.orientation.y = out_R.y
-    out.orientation.z = out_R.z
-
-    return out
 
 
 if __name__ == '__main__':

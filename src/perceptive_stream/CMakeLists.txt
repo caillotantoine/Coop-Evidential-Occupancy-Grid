@@ -22,6 +22,7 @@ add_message_files(
   Num.msg
   Img.msg
   BBox3D.msg
+  BBox2D.msg
 )
 
 generate_messages(
