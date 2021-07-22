@@ -24,56 +24,65 @@ class BBox2D_Proj:
         rospy.init_node("bbox_to_gol", anonymous=True)
         rospy.Subscriber('projector/bbox2d', BBox2D, self.callback_bbox)
         self.go_pub = rospy.Publisher('projector/GOL', OccupancyGrid, queue_size=10)
+        try: 
+            do_vis = rospy.get_param('~o3d')
+            self.do_vis = do_vis
+        except KeyError:
+            self.do_vis = False
 
-        vis = o3d.visualization.Visualizer()
-        vis.create_window(window_name='Open3D', width=800, height=600, left=50, top=50, visible=True)
+        if self.do_vis:
+            vis = o3d.visualization.Visualizer()
+            vis.create_window(window_name=rospy.get_name(), width=800, height=600, left=50, top=50, visible=True)
 
         self.is_modified = True
         self.list_geometries = []
         self.mutex_geometries = Lock()
         modif = False
         geometries = []
+        
+        if self.do_vis:
+            (line_setX, line_setY) = self.create_ground_grid()
 
-        (line_setX, line_setY) = self.create_ground_grid()
-
-        vis.add_geometry(mesh_world_center)
-        vis.add_geometry(line_setX)
-        vis.add_geometry(line_setY)
+        if self.do_vis:
+            vis.add_geometry(mesh_world_center)
+            vis.add_geometry(line_setX)
+            vis.add_geometry(line_setY)
         while not rospy.is_shutdown():
+            if self.do_vis:
+                self.mutex_geometries.acquire()
+                try:
+                    if self.is_modified:
+                        new_geometries = copy.deepcopy(self.list_geometries) 
+                        modif = copy.deepcopy(self.is_modified)
+                        self.is_modified = False
+                finally:
+                    self.mutex_geometries.release()
 
-            self.mutex_geometries.acquire()
-            try:
-                if self.is_modified:
-                    new_geometries = copy.deepcopy(self.list_geometries) 
-                    modif = copy.deepcopy(self.is_modified)
-                    self.is_modified = False
-            finally:
-                self.mutex_geometries.release()
+                if modif:
+                    modif = False
+                    for geo in geometries:
+                        vis.remove_geometry(geo)
+                        pass
+                    geometries.clear()
+                    geometries = new_geometries
+                    for geo in geometries:
+                        vis.add_geometry(geo)
 
-            if modif:
-                modif = False
-                for geo in geometries:
-                    vis.remove_geometry(geo)
-                    pass
-                geometries.clear()
-                geometries = new_geometries
-                for geo in geometries:
-                    vis.add_geometry(geo)
-                    pass
-
-            vis.poll_events()
-            vis.update_renderer()
-        vis.destroy_window()
+                vis.poll_events()
+                vis.update_renderer()
+        if self.do_vis:
+            vis.destroy_window()
 
     def callback_bbox(self, data: BBox2D):
         proj = Projector(data)
-        self.mutex_geometries.acquire(blocking=True)
-        try:
-            self.is_modified = True
-            self.list_geometries = proj.get_geometries()
-            pass
-        finally:
-            self.mutex_geometries.release()
+        if self.do_vis:
+            self.mutex_geometries.acquire(blocking=True)
+            try:
+                self.is_modified = True
+                self.list_geometries = proj.get_geometries()
+                pass
+            finally:
+                self.mutex_geometries.release()
         
         self.go_pub.publish(proj.get_occupGrid())
 
