@@ -83,8 +83,9 @@ class BBox2D_Proj:
                 pass
             finally:
                 self.mutex_geometries.release()
-        
-        self.go_pub.publish(proj.get_occupGrid())
+        gol = proj.get_occupGrid()
+        gol.header = data.header
+        self.go_pub.publish(gol)
 
 
     def create_ground_grid(self):

@@ -69,6 +69,7 @@ class BBoxExtractor:
             # If there are some bounding box, draw them on the image
             # img_msg = self.drawBoxes(data, listOfBBox)
             (img_msg, bbox2D) = self.bboxMgr.draw2DBoxes(data, listOfBBox)
+            bbox2D.header = data.header
             for bbox in listOfBBox:
                 rospy.loginfo("position : X %3.2fm   \tY %3.2fm"%(bbox.vehicle.position.x, bbox.vehicle.position.y))
             for bbox in bbox2D.roi:
