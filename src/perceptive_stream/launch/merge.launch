@@ -1,7 +1,7 @@
 <launch>
     <!-- Global parameters -->
     <param name="starting" type="int" value="60"/>
-    <param name="rate" type="int" value="5"/>
+    <param name="rate" type="double" value="0.5"/>
 
     <!-- Nodes -->
 
@@ -28,7 +28,6 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Infra/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Infra/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="Infra_camRGB."/>
-        <remap from="camera/image" to="camera/image_inf_1"/>
     </node>
 
     <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V0_camRGB" output="screen">
@@ -36,7 +35,6 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V0/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V0/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V0_camRGB."/>
-        <remap from="camera/image" to="camera/image_V_0"/>
     </node>
 
     <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V1_camRGB" output="screen">
@@ -44,7 +42,6 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V1_camRGB."/>
-        <remap from="camera/image" to="camera/image_V_1"/>
     </node>
 
     <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V2_camRGB" output="screen">
@@ -52,37 +49,12 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V2/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V2/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V2_camRGB."/>
-        <remap from="camera/image" to="camera/image_V_2"/>
     </node>
 
     <!-- Extract 2D bounding box -->
 
     <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_inf_1" output="screen">
         <param name="queue_size" type="int" value="100"/>
-        <remap from="camera/image" to="camera/image_inf_1"/>
-        <remap from="projector/img" to="projector/img_inf_1"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_inf_1"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_V_0" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <remap from="camera/image" to="camera/image_V_0"/>
-        <remap from="projector/img" to="projector/img_V_0"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_0"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_V_1" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <remap from="camera/image" to="camera/image_V_1"/>
-        <remap from="projector/img" to="projector/img_V_1"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_1"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_V_2" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <remap from="camera/image" to="camera/image_V_2"/>
-        <remap from="projector/img" to="projector/img_V_2"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_2"/>
     </node>
 
     <!-- Create Local occupancy grid -->
@@ -90,37 +62,11 @@
     <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_1" output="screen">
         <param name="queue_size" type="int" value="100"/>
         <param name="o3d" type="bool" value="false"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_inf_1"/>
-        <remap from="projector/GOL" to="projector/GOL_inf_1"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_V_0" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <param name="o3d" type="bool" value="false"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_0"/>
-        <remap from="projector/GOL" to="projector/GOL_V_0"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_V_1" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <param name="o3d" type="bool" value="false"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_1"/>
-        <remap from="projector/GOL" to="projector/GOL_V_1"/>
-    </node>
-
-    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_V_2" output="screen">
-        <param name="queue_size" type="int" value="100"/>
-        <param name="o3d" type="bool" value="false"/>
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_2"/>
-        <remap from="projector/GOL" to="projector/GOL_V_2"/>
     </node>
 
     <!-- Aggregate GOL -->
 
-    <!-- <node pkg="perceptive_stream" type="GOL_merger.py" name="gol_merger" output="screen">
-        <remap from="projector/bbox2d" to="projector/bbox2d_V_2"/> 
-        <remap from="projector/GOL" to="projector/GOL_V_1"/>
-        <remap from="projector/GOL" to="projector/GOL_V_2"/>
-    </node> -->
+    <node pkg="perceptive_stream" type="GOL_merger.py" name="gol_merger" output="screen">
+    </node>
 
 </launch>

@@ -81,9 +81,8 @@ class BBoxManager:
 
             # rospy.loginfo("Valid bbox: {}".format(valid))
 
-            if valid and int(roi.x_offset) > 0 and int(roi.y_offset) > 0:
-                if len(bbox_vert2D_cam) > 0:
-                    setOfBbox.append(roi)
+            if valid:
+                setOfBbox.append(roi)
 
                 for i in range(len(bbox_vert2D_cam)):
                     cv_img = cv.line(cv_img, bbox_vert2D_cam[i], bbox_vert2D_cam[(i+1)%len(bbox_vert2D_cam)], color, thickness)
@@ -121,62 +120,41 @@ class BBoxManager:
             vertex.append(in_px_norm) 
         return vertex
 
-    def compute2Dbbox (self, image, bbox):
-        bbox_vert_as3D = self.compute1bbox(image, bbox) # project the points in the camera plane
-        points = [(int(x[0]), int(x[1])) for x in bbox_vert_as3D] # we need tuple for the points
-
-        # Get the points of the 2D shape
-        x_min = +10000
-        x_max = -10000
-        y_min = +10000
-        y_max = -10000
-
-        # Check if points are not too far from the image
-        x_min_v = False
-        x_max_v = False
-        y_min_v = False
-        y_max_v = False
-
-        for pt in points:
-            if pt[0] < x_min:
-                x_min = pt[0]
-                x_min_v = True
-            if pt[1] < y_min:
-                y_min = pt[1]
-                y_min_v = True
-            if pt[0] > x_max:
-                x_max = pt[0]
-                x_max_v = True
-            if pt[1] > y_max:
-                y_max = pt[1]
-                y_max_v = True
-        
-        valid_lim = x_min_v and x_max_v and y_min_v and y_max_v
-
-        is_on_image = False
-        if (x_max > 0) and (x_max < image.image.width):
-            is_on_image = is_on_image or True
-        if (x_min > 0) and (x_min < image.image.width):
-            is_on_image = is_on_image or True
-        if (y_max > 0) and (y_max < image.image.height):
-            is_on_image = is_on_image or True
-        if (y_min > 0) and (y_min < image.image.height):
-            is_on_image = is_on_image or True
-
-        is_on_image = is_on_image and valid_lim
-
+    def compute2Dbbox (self, image: Img, bbox):
         roi = RegionOfInterest()
-        roi.x_offset = x_min
-        roi.y_offset = y_min
-        roi.height = y_max - y_min
-        roi.width = x_max - x_min
-
+        roi.x_offset = 0
+        roi.y_offset = 0
+        roi.height = 0
+        roi.width = 0
+        valid = False
         points_out = []
-        points_out.append((x_max, y_max))
-        points_out.append((x_max, y_min))
-        points_out.append((x_min, y_min))
-        points_out.append((x_min, y_max))
-        return (points_out, roi, is_on_image)
+
+        bbox_vert_as3D = self.compute1bbox(image, bbox) # project the points in the camera plane
+        if len(bbox_vert_as3D) > 0:
+            points = np.transpose([[int(x[0]), int(x[1])] for x in bbox_vert_as3D]) # we need tuple for the points
+
+            # Get the points of the 2D shape
+            x_min = np.amin(points[0])
+            x_max = np.amax(points[0])
+            y_min = np.amin(points[1])
+            y_max = np.amax(points[1])
+
+            valid = True
+            if int(x_min) < 0 or int(x_max) > int(image.image.width) or int(y_min) < 0 or int(y_max) > int(image.image.height):
+                valid = False
+
+            if valid:
+                roi.x_offset = x_min
+                roi.y_offset = y_min
+                roi.height = y_max - y_min
+                roi.width = x_max - x_min
+            
+                points_out.append((x_max, y_max))
+                points_out.append((x_max, y_min))
+                points_out.append((x_min, y_min))
+                points_out.append((x_min, y_max))
+
+        return (points_out, roi, valid)
 
 
     def placeBBoxInWorld(self, bbox):

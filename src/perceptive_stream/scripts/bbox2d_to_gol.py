@@ -74,6 +74,7 @@ class BBox2D_Proj:
             vis.destroy_window()
 
     def callback_bbox(self, data: BBox2D):
+        rospy.logwarn("GOL publisher : {}\n".format(data.header.frame_id))
         proj = Projector(data)
         if self.do_vis:
             self.mutex_geometries.acquire(blocking=True)

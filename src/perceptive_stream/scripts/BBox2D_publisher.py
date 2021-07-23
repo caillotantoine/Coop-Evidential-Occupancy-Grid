@@ -16,6 +16,7 @@ from sensor_msgs.msg import Image, RegionOfInterest
 from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D, BBox2D
+import copy
 
 from utils.bbox_manager import BBoxManager
 from utils.queue_manager import QueueROSmsgs
@@ -51,30 +52,32 @@ class BBoxExtractor:
     def callback_img(self, data):
         # Display and record the frame ID number (used to synchronize)
         img_id = data.header.frame_id.split('.')[1]
-        rospy.loginfo("Received img : %s", img_id)
+        # rospy.loginfo("Received img : %s", img_id)
+        rospy.logwarn("BBox filter : {}".format(data.header.frame_id))
 
         # There can be several bounding box (one per vehicles)
         listOfBBox = []
         bboxFound = True
+        Bbox_queue_copy = copy.deepcopy(self.Bbox_queue)
         while(bboxFound):
-            bboxIdx = self.Bbox_queue.searchFirst(".%s"%img_id) # Looking for corresponding bounding box with this image
+            bboxIdx = Bbox_queue_copy.searchFirst(".%s"%img_id) # Looking for corresponding bounding box with this image
             if bboxIdx == -1:
                 bboxFound = False 
                 break # there is no bounding box anymore, let's get out of the loop
-            listOfBBox.append(self.Bbox_queue.pop(bboxIdx)) # remove the corresponding bounding box from the que and add it to the local list
+            listOfBBox.append(Bbox_queue_copy.pop(bboxIdx)) # remove the corresponding bounding box from the que and add it to the local list
+            # listOfBBox.append(self.Bbox_queue.get(bboxIdx))
+
+        for frameid in listOfBBox:
+            rospy.loginfo("list of BBox : {}".format(frameid.header.frame_id))
+
+        rospy.loginfo("")
 
         img_msg = Image()
 
         if len(listOfBBox) > 0:
             # If there are some bounding box, draw them on the image
-            # img_msg = self.drawBoxes(data, listOfBBox)
             (img_msg, bbox2D) = self.bboxMgr.draw2DBoxes(data, listOfBBox)
             bbox2D.header = data.header
-            for bbox in listOfBBox:
-                rospy.loginfo("position : X %3.2fm   \tY %3.2fm"%(bbox.vehicle.position.x, bbox.vehicle.position.y))
-            for bbox in bbox2D.roi:
-                rospy.loginfo("BBox : ")
-                rospy.loginfo("    x: %d  y: %d  w: %d  h: %d"%(bbox.x_offset, bbox.y_offset, bbox.width, bbox.height))
         else:
             # if there is no bounding box, just pipe the image
             img_msg = data.image
@@ -88,7 +91,7 @@ class BBoxExtractor:
                 self.pub_bbox.publish(bbox2D)
         finally:
             self.pub_mutex.release()
-        rospy.loginfo("End process img : %s", img_id)
+        # rospy.loginfo("End process img : %s", img_id)
 
     def callback_bbox(self, data):
         self.Bbox_queue.add(data) # just add the read bounding box to the queue

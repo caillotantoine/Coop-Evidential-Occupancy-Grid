@@ -135,7 +135,7 @@ class Projector:
                 x = int(pt[0][0] / self.step_grid + (self.grid_size / 2.0))
                 y = int(pt[1][0] / self.step_grid + (self.grid_size / 2.0))
                 pts.append([x, y])
-            rospy.logwarn("footprint \n{}".format(np.array(pts)))
+            # rospy.logwarn("footprint \n{}".format(np.array(pts)))
             cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
 
 
