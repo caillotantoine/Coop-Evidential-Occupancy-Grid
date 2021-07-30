@@ -32,12 +32,13 @@ class GOmerger:
 
         # Merge the GOL
         GOLout = self.usersGOL[0]
-        rawMap = np.full((GOLout.info.width*GOLout.info.height), -1, dtype=int)
+        rawMap = np.full((GOLout.info.width*GOLout.info.height), -1, dtype=float)
         rospy.logerr("N GOL : {}".format(len(self.usersGOL)))
         for gol in self.usersGOL:
             # pass
             gol_data = np.array(gol.data)
             rawMap = np.add(rawMap, gol_data)
+        rawMap = np.divide(rawMap, len(self.usersGOL))
         rawMap = np.maximum(rawMap, -1)
         rawMap = np.minimum(rawMap, 100)
         # rawMap = np.divide(rawMap, len(self.usersGOL))

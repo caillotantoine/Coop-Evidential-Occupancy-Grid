@@ -21,6 +21,12 @@ def vec2mat(v):
         T[i][3] = n
     return T
 
+def getNormVec4(v):
+    a = normVec4(v)
+    a = np.transpose(a)
+    a = np.square(a)
+    a = np.sum(a)
+    return np.sqrt(a)
 
 
 def rotxMat(thetha):
