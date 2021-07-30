@@ -5,7 +5,7 @@ import rospy
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-
+import time
 
 class GOmerger:
 
@@ -33,7 +33,7 @@ class GOmerger:
         # Merge the GOL
         GOLout = self.usersGOL[0]
         rawMap = np.full((GOLout.info.width*GOLout.info.height), -1, dtype=float)
-        rospy.logerr("N GOL : {}".format(len(self.usersGOL)))
+        tic = time.process_time()
         for gol in self.usersGOL:
             # pass
             gol_data = np.array(gol.data)
@@ -42,7 +42,8 @@ class GOmerger:
         rawMap = np.maximum(rawMap, -1)
         rawMap = np.minimum(rawMap, 100)
         # rawMap = np.divide(rawMap, len(self.usersGOL))
-        rospy.loginfo("merged {}".format(data.header.frame_id))
+        toc = time.process_time()
+        rospy.loginfo("Merged {} GOL of {} in {}s.".format(len(self.usersGOL), data.header.frame_id, toc-tic))
 
         GOLout.data = rawMap.astype(dtype=np.int8).flatten().tolist()
         self.pub.publish(GOLout)

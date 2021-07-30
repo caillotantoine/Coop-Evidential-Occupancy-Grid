@@ -8,7 +8,7 @@ import rospy
 import open3d as o3d
 from sensor_msgs.msg import RegionOfInterest, CameraInfo
 from geometry_msgs.msg import Pose
-# from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation as R
 from perceptive_stream.msg import BBox2D
 from utils.utilsant import pose2Tmat, getTCCw
 from utils.vecMatUtils import *
@@ -16,6 +16,7 @@ from utils import plucker
 import numpy as np
 import cv2
 from collections import namedtuple
+import time
 
 from nav_msgs.msg import OccupancyGrid
 
@@ -50,9 +51,14 @@ class Projector:
 
         self.worked_ROI = []
 
+        tic = time.process_time()
         for roi in ROIs: # For each ROI
-            proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=50, pix_err=2.0)
+            # proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=5.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
+            # proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=1, pix_err=0.0, pos_err=Pos_error(0, 0, 0), rot_err=Rot_error(0, 0, 0))
+            proj_roi = self.compute_roi(roi=roi, cam_pos=self.cam_pos_mat)
             self.worked_ROI.append(proj_roi)
+        toc = time.process_time()
+        rospy.loginfo("Computed {} ROI of {} in {}s.".format(len(ROIs), bboxes.header.frame_id, toc-tic))
 
     def compute_noisy_roi(self, roi: RegionOfInterest, cam_pos, N_particles, pix_err=0.0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)):
         (initial_pts_bbox, raw_map) = self.compute_roi(roi=roi, cam_pos=cam_pos)
@@ -62,20 +68,27 @@ class Projector:
         w = np.random.normal(loc = roi.width, scale = pix_err, size=N_particles)
         h = np.random.normal(loc = roi.height, scale = pix_err, size=N_particles)
 
-        # X = np.random.normal(loc = , scale = pos_err, size=N_particles)
-        # Y = np.random.normal(loc = , scale = pos_err, size=N_particles)
-        # Z = np.random.normal(loc = , scale = pos_err, size=N_particles)
-        # rX = np.random.normal(loc = , scale = rot_err, size=N_particles)
-        # rY = np.random.normal(loc = , scale = rot_err, size=N_particles)
-        # rZ = np.random.normal(loc = , scale = rot_err, size=N_particles)
+        
+        t = cam_pos[:3, 3]
+        r = cam_pos[:3, :3]
+        r = R.from_dcm(r)
+        r_euler=R.as_euler(r, "xyz")
+
+        noiseT = np.random.normal(loc=t, scale=[pos_err.x, pos_err.y, pos_err.z], size=(N_particles, 3))
+        noiseR = np.random.normal(loc=r_euler, scale=[rot_err.x, rot_err.y, rot_err.z], size=(N_particles, 3))
+        # rospy.logerr("noiseT :\n{}".format(noiseT))
 
         count: int
         count = 0
 
         for i in range(N_particles):
             noisyROI = RegionOfInterest(x_offset = int(ox[i]), y_offset = int(oy[i]), width = int(w[i]), height = int(h[i]))
+            newT = np.identity(4)
+            newT[:3, :3] = R.from_euler('xyz', noiseR[i]).as_dcm()
+            newT[:3, 3] = noiseT[i]
+            # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
             try:
-                (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=cam_pos)
+                (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
             except OverflowError:
                 rospy.logerr('Error with ROI:\n{}'.format(noisyROI))
             else:
@@ -99,7 +112,7 @@ class Projector:
         vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
         vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
         for p in vertex:
-            ps = np.matmul(self.K_inv, p) * self.grid_range
+            ps = np.matmul(self.K_inv, p) * (self.grid_range * 2.0)
             controlPS = np.matmul(self.K_inv, p) * 1.0
             # rospy.logwarn("PS : \n{}".format(ps))
             pg = np.matmul(cam_pos, vec3tovec4(ps))
