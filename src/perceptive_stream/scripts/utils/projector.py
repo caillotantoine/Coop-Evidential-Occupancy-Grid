@@ -34,7 +34,7 @@ class Projector:
     #       pts_bbox : 
     #       footprint_pts : 
 
-    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0)), step_grid = 0.1, grid_range = 75):
+    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0)), step_grid = 0.2, grid_range = 75):
         self.step_grid = step_grid
         self.grid_range = grid_range
         self.grid_size = int(2*self.grid_range/self.step_grid)
@@ -51,11 +51,21 @@ class Projector:
 
         self.worked_ROI = []
 
+        imgROI = RegionOfInterest(x_offset = 0, y_offset = 0, width = bboxes.cam_info.width, height = bboxes.cam_info.height)
+
         tic = time.process_time()
+        (a, b) = self.compute_noisy_roi(roi=imgROI, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=0.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
+        # (a, b) = self.compute_roi(roi=imgROI, cam_pos=self.cam_pos_mat, log=True)
+        b = np.minimum(b, len(ROIs))
+        self.worked_ROI.append((a, b))
+
+        if bboxes.header.frame_id.split('.')[0] == "Infra_camRGB":
+            rospy.logwarn(a)
+
         for roi in ROIs: # For each ROI
-            # proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=5.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
+            proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=5.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
             # proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=1, pix_err=0.0, pos_err=Pos_error(0, 0, 0), rot_err=Rot_error(0, 0, 0))
-            proj_roi = self.compute_roi(roi=roi, cam_pos=self.cam_pos_mat)
+            # proj_roi = self.compute_roi(roi=roi, cam_pos=self.cam_pos_mat)
             self.worked_ROI.append(proj_roi)
         toc = time.process_time()
         rospy.loginfo("Computed {} ROI of {} in {}s.".format(len(ROIs), bboxes.header.frame_id, toc-tic))
@@ -100,7 +110,7 @@ class Projector:
 
         return (initial_pts_bbox, raw_map)
 
-    def compute_roi(self, roi: RegionOfInterest, cam_pos):
+    def compute_roi(self, roi: RegionOfInterest, cam_pos, log=False):
         vertex = [] # extract each 
         pts_bbox = []
         cam = vec4n(0, 0, 0)
@@ -112,21 +122,31 @@ class Projector:
         vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
         vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
         for p in vertex:
-            ps = np.matmul(self.K_inv, p) * (self.grid_range * 2.0)
+            ps = np.matmul(self.K_inv, p) * (self.grid_range * 1.5)
             controlPS = np.matmul(self.K_inv, p) * 1.0
-            # rospy.logwarn("PS : \n{}".format(ps))
             pg = np.matmul(cam_pos, vec3tovec4(ps))
             controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
-            # if pg[2][0] >= controlPG[2][0]:
-            #     rospy.logwarn("Ray pointing sky : \n{}\n{}".format(np.transpose(pg), np.transpose(controlPG)))
-            # pts_bbox.append([pg[i][0] for i in range(3)])
             L = plucker.line(cam, pg)
             fp_pt = plucker.interLinePlane(L, self.gnd_plane)
 
-            if getNormVec4(fp_pt) > self.grid_range or np.isnan(getNormVec4(fp_pt)) or pg[2][0] >= controlPG[2][0]:
-                # rospy.logerr("Out : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}".format(np.transpose(pg)))
-                pts_bbox.append([normVec4(pg)[i][0] for i in range(3)])
+            if getNormVec4(fp_pt) > self.grid_range:
+                # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+                v = [normVec4(pg)[i][0] for i in range(3)]
+                v[2] = 0
+                pts_bbox.append(v)
+            elif np.isnan(getNormVec4(fp_pt)):
+                # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+                v = [normVec4(pg)[i][0] for i in range(3)]
+                v[2] = 0
+                pts_bbox.append(v)
+            elif pg[2][0] >= controlPG[2][0]:
+                # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+                v = [normVec4(pg)[i][0] for i in range(3)]
+                v[2] = 0
+                pts_bbox.append(v)
             else:
                 pts_bbox.append([normVec4(fp_pt)[i][0] for i in range(3)])
 
@@ -140,7 +160,12 @@ class Projector:
             except OverflowError:
                 rospy.logerr("Out : {}".format(pt))
             pts.append([x, y])
+        
         cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
+
+        if log:
+            rospy.logwarn(pts)
+        
 
         return (pts_bbox, raw_map)
 
@@ -177,12 +202,13 @@ class Projector:
             #     fp_points_td.append([p[i][0] for i in range(3)])
 
             fp_lines_td = []
-            for i in range(len(pts_bbox)):
-                fp_lines_td.append([i, (i+1)%len(pts_bbox)])
+            footprint_pts = pts_bbox[1:]
+            for i in range(len(footprint_pts)):
+                fp_lines_td.append([i, (i+1)%len(footprint_pts)])
 
             colors_lines_fp = [[1, 0, 0] for i in range(len(fp_lines_td))]
             lineset_bbox_fp = o3d.geometry.LineSet(
-                points=o3d.utility.Vector3dVector(pts_bbox),
+                points=o3d.utility.Vector3dVector(footprint_pts),
                 lines=o3d.utility.Vector2iVector(fp_lines_td)
             )
             lineset_bbox_fp.colors = o3d.utility.Vector3dVector(colors_lines_fp)

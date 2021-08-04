@@ -69,6 +69,10 @@ def talker():
             img = cv.imread(imagePath)
             img_msg.image = bridge.cv2_to_imgmsg(img, "bgr8")
 
+            img_msg.info.width = img_msg.image.width
+            img_msg.info.height = img_msg.image.height
+
+
             # time to the ros server
             img_msg.header.stamp = rospy.get_rostime()
             img_msg.header.frame_id = "%s%d"%(sensor_ID, starting+cnt)

@@ -1,7 +1,7 @@
 <launch>
     <!-- Global parameters -->
     <param name="starting" type="int" value="151"/> <!-- 61 -->
-    <param name="rate" type="double" value="0.5"/>
+    <param name="rate" type="double" value="0.1"/>
 
     <!-- Nodes -->
 
@@ -61,7 +61,7 @@
 
     <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_1" output="screen">
         <param name="queue_size" type="int" value="100"/>
-        <param name="o3d" type="bool" value="false"/>
+        <param name="o3d" type="bool" value="true"/>
     </node>
 
     <!-- Aggregate GOL -->

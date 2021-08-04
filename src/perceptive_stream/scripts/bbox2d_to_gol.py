@@ -79,9 +79,9 @@ class BBox2D_Proj:
         if self.do_vis:
             self.mutex_geometries.acquire(blocking=True)
             try:
-                self.is_modified = True
-                self.list_geometries = proj.get_geometries()
-                pass
+                if data.header.frame_id.split('.')[0] == "Infra_camRGB":
+                    self.is_modified = True
+                    self.list_geometries = proj.get_geometries()
             finally:
                 self.mutex_geometries.release()
         gol = proj.get_occupGrid()
