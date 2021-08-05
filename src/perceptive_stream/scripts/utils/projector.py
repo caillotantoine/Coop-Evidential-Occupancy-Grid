@@ -235,7 +235,7 @@ class Projector:
 
         for roi in self.worked_ROI:
             (_, map) = roi
-            pts = []
+            # pts = []
             raw_map = np.maximum(raw_map, map)
 
 

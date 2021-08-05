@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+from numpy.testing._private.utils import KnownFailureException
 import rospy
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
 import matplotlib.pyplot as plt
+from utils.DST import DST
 import copy
 
 class GOmerger:
@@ -55,43 +57,98 @@ class GOmerger:
         rawMap = np.full((GOLout.info.width*GOLout.info.height), -1, dtype=float)
         tic = time.process_time()
 
-        for i,gol in enumerate(self.usersGOL):
-            # pass
-            gol_data = np.array(gol.data)    
-            rawMap = np.add(rawMap, gol_data)
-        rawMap = np.divide(rawMap, len(self.usersGOL))
+        # Average on know cells
+        # for i in range(len(rawMap)):
+        #     avg = 0.0
+        #     cnt = 0
+        #     for gol in self.usersGOL:
+        #         if gol.data[i] != -1:
+        #             cnt += 1.0
+        #             avg += gol.data[i]
+        #     if cnt != 0:
+        #         rawMap[i] = avg / cnt
+
+        # DST
+        for i in range(len(rawMap)):
+            combined_masses = None
+            for gol in self.usersGOL:
+                
+                map_masses = self.bba1(gol.data[i], gol.header.frame_id)
+
+                if combined_masses == None:
+                    combined_masses = copy.deepcopy(map_masses)
+                else:
+                    combined_masses = combined_masses.sum(map_masses)
+
+            rawMap[i] = combined_masses.get_mass({"O"}) * 100.0
+
+        # Up Contrast
+        # maxi = np.amax(rawMap)
+        # rawMap = np.multiply(rawMap, 100.0/maxi)
+
+        # Clip the map between values for ROS standard
         rawMap = np.maximum(rawMap, -1)
         rawMap = np.minimum(rawMap, 100)
-        # rawMap = np.divide(rawMap, len(self.usersGOL))
         toc = time.process_time()
         rospy.loginfo("Merged {} GOL of {} in {}s.".format(len(self.usersGOL), data.header.frame_id, toc-tic))
-        
-
         
 
         GOLout.data = rawMap.astype(dtype=np.int8).flatten().tolist()
         self.pub.publish(GOLout)
 
+        # displaying
         mapimg = np.add(GOLout.data, 1).reshape((GOLout.info.width, GOLout.info.height))
         self.axes[1, 2].imshow(mapimg)
         self.axes[1, 2].set_title("Merged GOL")
-        
-
         plt.pause(0.01)
-        
-        
+        # GOLout.header.frame_id
 
-        # if self.mapFig is None:
-        #     self.mapFig = plt.figure(1)
-        #     self.ax = self.mapFig.add_subplot( 111 )
-        #     self.ax.set_title(data.header.frame_id)
-        #     self.im = self.ax.imshow(mapimg) # Blank starting image
-        #     self.mapFig.show()
-        #     self.im.axes.figure.canvas.draw()
-        # else:
-        #     self.ax.set_title(data.header.frame_id)
-        #     self.im.set_data(mapimg)
-        #     self.im.axes.figure.canvas.draw()
+
+    def bba1(self, cell, frame_id):
+        O = 0
+        F = 0
+        OF = 0
+        # if is from infrastructure 
+        if frame_id.find('Infra') == -1:
+            if cell == -1:
+                OF = 1.0
+            else: 
+                F = 1.0 - (cell / 100.0)
+                OF = (cell / 100.0)
+        # if is from embeded sensor 
+        else:
+            if cell == -1:
+                OF = 1.0
+            else: 
+                O = (cell / 100.0)
+                OF = 1.0 - (cell / 100.0)
+                    
+        return DST([({"O"}, O), ({"F"}, F), ({"O", "F"}, OF)])
+
+
+    def bba0(self, cell, frame_id):
+        O = 0
+        F = 0
+        OF = 0
+        # if is from infrastructure 
+        if frame_id.find('Infra') == -1:
+            if cell == -1:
+                OF = 1.0
+            else: 
+                O = (cell / 100.0)
+                OF = 1.0 - O
+                
+        # if is from embeded sensor 
+        else:
+            if cell == -1:
+                OF = 1.0
+            else:
+                F = 1.0 - (cell / 100.0)
+                OF = 1 - F
+                    
+        return DST([({"O"}, O), ({"F"}, F), ({"O", "F"}, OF)])
 
 if __name__ == '__main__':
     proj_node = GOmerger()
+
+
