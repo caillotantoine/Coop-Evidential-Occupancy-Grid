@@ -17,11 +17,81 @@ import numpy as np
 import cv2
 from collections import namedtuple
 import time
+import multiprocessing as mp
 
 from nav_msgs.msg import OccupancyGrid
 
 Pos_error = namedtuple('Pos_error', 'x y z')
 Rot_error = namedtuple('Rot_error', 'x y z')
+
+def compute_roi_p(roi: RegionOfInterest, cam_pos, K_inv, grid_range, grid_size, step_grid, gnd_plane, log=False):
+    vertex = [] # extract each 
+    pts_bbox = []
+    cam = vec4n(0, 0, 0)
+    cam = np.matmul(cam_pos, cam)
+    pts_bbox.append([cam[i][0] for i in range(3)])
+    
+    vertex.append(vec3(roi.x_offset, roi.y_offset, 1))
+    vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset, 1))
+    vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
+    vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
+    for p in vertex:
+        ps = np.matmul(K_inv, p) * (grid_range * 1.5)
+        controlPS = np.matmul(K_inv, p) * 1.0
+        pg = np.matmul(cam_pos, vec3tovec4(ps))
+        controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
+        L = plucker.line(cam, pg)
+        fp_pt = plucker.interLinePlane(L, gnd_plane)
+
+        if getNormVec4(fp_pt) > grid_range:
+            # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            v = [normVec4(pg)[i][0] for i in range(3)]
+            v[2] = 0
+            pts_bbox.append(v)
+        elif np.isnan(getNormVec4(fp_pt)):
+            # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            v = [normVec4(pg)[i][0] for i in range(3)]
+            v[2] = 0
+            pts_bbox.append(v)
+        elif pg[2][0] >= controlPG[2][0]:
+            # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            v = [normVec4(pg)[i][0] for i in range(3)]
+            v[2] = 0
+            pts_bbox.append(v)
+        else:
+            pts_bbox.append([normVec4(fp_pt)[i][0] for i in range(3)])
+
+    raw_map = np.full((grid_size, grid_size), -1, dtype=np.float)
+
+    pts = []
+    for pt in pts_bbox[1:]:
+        try:
+            x = int(pt[0] / step_grid + (grid_size / 2.0))
+            y = int(pt[1] / step_grid + (grid_size / 2.0))
+        except OverflowError:
+            rospy.logerr("Out : {}".format(pt))
+        pts.append([x, y])
+    
+    cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
+
+    if log:
+        rospy.logwarn(pts)
+    return (pts_bbox, raw_map)
+
+def createT(rot, trans):
+    newT = np.identity(4)
+    newT[:3, :3] = R.from_euler('xyz', rot).as_dcm()
+    newT[:3, 3] = trans
+    return newT
+
+def compute_roi_interface_p(x):
+    (roi, T, K, g_range, g_size, g_step, plane) = x
+    (_, gol) = compute_roi_p(roi, T, K, g_range, g_size, g_step, plane)
+    return gol
+
 
 class Projector:
 
@@ -68,15 +138,16 @@ class Projector:
             # proj_roi = self.compute_roi(roi=roi, cam_pos=self.cam_pos_mat)
             self.worked_ROI.append(proj_roi)
         toc = time.process_time()
-        rospy.loginfo("Computed {} ROI of {} in {}s.".format(len(ROIs), bboxes.header.frame_id, toc-tic))
+        rospy.loginfo("Computed {} ROI of {} in {}s.".format(len(ROIs)+1, bboxes.header.frame_id, toc-tic))
 
     def compute_noisy_roi(self, roi: RegionOfInterest, cam_pos, N_particles, pix_err=0.0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)):
-        (initial_pts_bbox, raw_map) = self.compute_roi(roi=roi, cam_pos=cam_pos)
+        (initial_pts_bbox, raw_map) = compute_roi_p(roi, cam_pos, self.K_inv, self.grid_range, self.grid_size, self.step_grid, self.gnd_plane)
         
         ox = np.random.normal(loc = roi.x_offset, scale = pix_err, size=N_particles)
         oy = np.random.normal(loc = roi.y_offset, scale = pix_err, size=N_particles)
         w = np.random.normal(loc = roi.width, scale = pix_err, size=N_particles)
         h = np.random.normal(loc = roi.height, scale = pix_err, size=N_particles)
+        
 
         
         t = cam_pos[:3, 3]
@@ -86,88 +157,93 @@ class Projector:
 
         noiseT = np.random.normal(loc=t, scale=[pos_err.x, pos_err.y, pos_err.z], size=(N_particles, 3))
         noiseR = np.random.normal(loc=r_euler, scale=[rot_err.x, rot_err.y, rot_err.z], size=(N_particles, 3))
+        rospy.logerr("create noisys")
+        noisys = [(RegionOfInterest(x_offset = int(ox[i]), y_offset = int(oy[i]), width = int(w[i]), height = int(h[i])), createT(noiseR[i], noiseT[i]), self.K_inv, self.grid_range, self.grid_size, self.step_grid, self.gnd_plane) for i in range(N_particles)]
         # rospy.logerr("noiseT :\n{}".format(noiseT))
 
-        count: int
-        count = 0
 
-        for i in range(N_particles):
-            noisyROI = RegionOfInterest(x_offset = int(ox[i]), y_offset = int(oy[i]), width = int(w[i]), height = int(h[i]))
-            newT = np.identity(4)
-            newT[:3, :3] = R.from_euler('xyz', noiseR[i]).as_dcm()
-            newT[:3, 3] = noiseT[i]
-            # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
-            try:
-                (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
-            except OverflowError:
-                rospy.logerr('Error with ROI:\n{}'.format(noisyROI))
-            else:
-                raw_map = np.add(raw_map, new_map)
-                count = count + 1
+        pool = mp.Pool(mp.cpu_count())
+        rospy.logerr("Start ROI")
+        maps = pool.map(compute_roi_interface_p, noisys)
 
-        raw_map = np.divide(raw_map, count)
+        rospy.logerr("merge ROI")
+        for new_map in maps:
+            raw_map = np.add(raw_map, new_map)
+
+        # for (roi, T, _, _, _, _, _) in noisys:
+        #     # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
+        #     try:
+        #         # (_, new_map) = self.compute_roi(roi=roi, cam_pos=T)
+        #         (_, new_map) = compute_roi_p(roi, T, self.K_inv, self.grid_range, self.grid_size, self.step_grid, self.gnd_plane)
+        #     except OverflowError:
+        #         rospy.logerr('Error with ROI:\n{}'.format(roi))
+        #     else:
+        #         raw_map = np.add(raw_map, new_map)
+        #         count = count + 1
+
+        raw_map = np.divide(raw_map, len(noisys))
         raw_map = np.minimum(raw_map, 100)
 
         return (initial_pts_bbox, raw_map)
 
-    def compute_roi(self, roi: RegionOfInterest, cam_pos, log=False):
-        vertex = [] # extract each 
-        pts_bbox = []
-        cam = vec4n(0, 0, 0)
-        cam = np.matmul(cam_pos, cam)
-        pts_bbox.append([cam[i][0] for i in range(3)])
+    # def compute_roi(self, roi: RegionOfInterest, cam_pos, log=False):
+    #     vertex = [] # extract each 
+    #     pts_bbox = []
+    #     cam = vec4n(0, 0, 0)
+    #     cam = np.matmul(cam_pos, cam)
+    #     pts_bbox.append([cam[i][0] for i in range(3)])
         
-        vertex.append(vec3(roi.x_offset, roi.y_offset, 1))
-        vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset, 1))
-        vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
-        vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
-        for p in vertex:
-            ps = np.matmul(self.K_inv, p) * (self.grid_range * 1.5)
-            controlPS = np.matmul(self.K_inv, p) * 1.0
-            pg = np.matmul(cam_pos, vec3tovec4(ps))
-            controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
-            L = plucker.line(cam, pg)
-            fp_pt = plucker.interLinePlane(L, self.gnd_plane)
+    #     vertex.append(vec3(roi.x_offset, roi.y_offset, 1))
+    #     vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset, 1))
+    #     vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
+    #     vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
+    #     for p in vertex:
+    #         ps = np.matmul(self.K_inv, p) * (self.grid_range * 1.5)
+    #         controlPS = np.matmul(self.K_inv, p) * 1.0
+    #         pg = np.matmul(cam_pos, vec3tovec4(ps))
+    #         controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
+    #         L = plucker.line(cam, pg)
+    #         fp_pt = plucker.interLinePlane(L, self.gnd_plane)
 
-            if getNormVec4(fp_pt) > self.grid_range:
-                # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-                v = [normVec4(pg)[i][0] for i in range(3)]
-                v[2] = 0
-                pts_bbox.append(v)
-            elif np.isnan(getNormVec4(fp_pt)):
-                # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-                v = [normVec4(pg)[i][0] for i in range(3)]
-                v[2] = 0
-                pts_bbox.append(v)
-            elif pg[2][0] >= controlPG[2][0]:
-                # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-                v = [normVec4(pg)[i][0] for i in range(3)]
-                v[2] = 0
-                pts_bbox.append(v)
-            else:
-                pts_bbox.append([normVec4(fp_pt)[i][0] for i in range(3)])
+    #         if getNormVec4(fp_pt) > self.grid_range:
+    #             # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+    #             # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+    #             v = [normVec4(pg)[i][0] for i in range(3)]
+    #             v[2] = 0
+    #             pts_bbox.append(v)
+    #         elif np.isnan(getNormVec4(fp_pt)):
+    #             # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+    #             # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+    #             v = [normVec4(pg)[i][0] for i in range(3)]
+    #             v[2] = 0
+    #             pts_bbox.append(v)
+    #         elif pg[2][0] >= controlPG[2][0]:
+    #             # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+    #             # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+    #             v = [normVec4(pg)[i][0] for i in range(3)]
+    #             v[2] = 0
+    #             pts_bbox.append(v)
+    #         else:
+    #             pts_bbox.append([normVec4(fp_pt)[i][0] for i in range(3)])
 
-        raw_map = np.full((self.grid_size, self.grid_size), -1, dtype=np.float)
+    #     raw_map = np.full((self.grid_size, self.grid_size), -1, dtype=np.float)
 
-        pts = []
-        for pt in pts_bbox[1:]:
-            try:
-                x = int(pt[0] / self.step_grid + (self.grid_size / 2.0))
-                y = int(pt[1] / self.step_grid + (self.grid_size / 2.0))
-            except OverflowError:
-                rospy.logerr("Out : {}".format(pt))
-            pts.append([x, y])
+    #     pts = []
+    #     for pt in pts_bbox[1:]:
+    #         try:
+    #             x = int(pt[0] / self.step_grid + (self.grid_size / 2.0))
+    #             y = int(pt[1] / self.step_grid + (self.grid_size / 2.0))
+    #         except OverflowError:
+    #             rospy.logerr("Out : {}".format(pt))
+    #         pts.append([x, y])
         
-        cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
+    #     cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
 
-        if log:
-            rospy.logwarn(pts)
+    #     if log:
+    #         rospy.logwarn(pts)
         
 
-        return (pts_bbox, raw_map)
+    #     return (pts_bbox, raw_map)
 
 
     def get_geometries(self):
