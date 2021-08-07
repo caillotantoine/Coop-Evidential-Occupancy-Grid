@@ -1,6 +1,6 @@
 <launch>
     <!-- Global parameters -->
-    <param name="starting" type="int" value="151"/> <!-- 61 -->
+    <param name="starting" type="int" value="61"/> <!-- 61 -->
     <param name="rate" type="double" value="0.1"/>
 
     <!-- Nodes -->

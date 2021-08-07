@@ -126,7 +126,7 @@ class GOmerger:
 
 
 
-            rawMap = pool.map(dst1, gols)
+            rawMap = pool.map(avg1, gols)
 
             # Clip the map between values for ROS standard
             toc = time.process_time()

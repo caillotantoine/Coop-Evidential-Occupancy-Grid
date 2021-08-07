@@ -64,8 +64,8 @@ class Projector:
 
         
 
-        if bboxes.header.frame_id.split('.')[0] == "Infra_camRGB":
-            rospy.logwarn(a)
+        # if bboxes.header.frame_id.split('.')[0] == "Infra_camRGB":
+        #     rospy.logwarn(a)
 
         for roi in ROIs: # For each ROI
             proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=5.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
@@ -94,24 +94,24 @@ class Projector:
         # rospy.logerr("noiseT :\n{}".format(noiseT))
 
 
-        count: int
-        count = 0
-
         for i in range(N_particles):
             noisyROI = RegionOfInterest(x_offset = int(ox[i]), y_offset = int(oy[i]), width = int(w[i]), height = int(h[i]))
             newT = np.identity(4)
             newT[:3, :3] = R.from_euler('xyz', noiseR[i]).as_dcm()
             newT[:3, 3] = noiseT[i]
-            # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
-            try:
-                (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
-            except OverflowError:
-                rospy.logerr('Error with ROI:\n{}'.format(noisyROI))
-            else:
-                raw_map = np.add(raw_map, new_map)
-                count = count + 1
 
-        raw_map = np.divide(raw_map, count)
+            (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
+            raw_map = np.add(raw_map, new_map)
+            # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
+            # try:
+            #     (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
+            # except OverflowError:
+            #     rospy.logerr('Error with ROI:\n{}'.format(noisyROI))
+            # else:
+            #     raw_map = np.add(raw_map, new_map)
+            #     count = count + 1
+
+        raw_map = np.divide(raw_map, N_particles)
         raw_map = np.minimum(raw_map, 100)
 
         return (initial_pts_bbox, raw_map)
@@ -135,21 +135,26 @@ class Projector:
             L = plucker.line(cam, pg)
             fp_pt = plucker.interLinePlane(L, self.gnd_plane)
 
-            if getNormVec4(fp_pt) > self.grid_range:
-                # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-                v = [normVec4(pg)[i][0] for i in range(3)]
-                v[2] = 0
-                pts_bbox.append(v)
-            elif np.isnan(getNormVec4(fp_pt)):
-                # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-                v = [normVec4(pg)[i][0] for i in range(3)]
-                v[2] = 0
-                pts_bbox.append(v)
-            elif pg[2][0] >= controlPG[2][0]:
-                # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-                # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            # if getNormVec4(fp_pt) > self.grid_range:
+            #     # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            #     v = [normVec4(pg)[i][0] for i in range(3)]
+            #     v[2] = 0
+            #     pts_bbox.append(v)
+            # elif np.isnan(getNormVec4(fp_pt)):
+            #     # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            #     v = [normVec4(pg)[i][0] for i in range(3)]
+            #     v[2] = 0
+            #     pts_bbox.append(v)
+            # elif pg[2][0] >= controlPG[2][0]:
+            #     # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
+            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
+            #     v = [normVec4(pg)[i][0] for i in range(3)]
+            #     v[2] = 0
+            #     pts_bbox.append(v)
+            
+            if np.isnan(getNormVec4(fp_pt)) or pg[2][0] >= controlPG[2][0]:
                 v = [normVec4(pg)[i][0] for i in range(3)]
                 v[2] = 0
                 pts_bbox.append(v)
@@ -169,8 +174,8 @@ class Projector:
         
         cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
 
-        if log:
-            rospy.logwarn(pts)
+        # if log:
+        #     rospy.logwarn(pts)
         
 
         return (pts_bbox, raw_map)
