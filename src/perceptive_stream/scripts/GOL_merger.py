@@ -67,6 +67,41 @@ def avg1(cells):
     else:
         return -1
 
+def avg2(cells):
+    c = None
+    cnt = 0
+    for (cell, _) in cells:
+        if cell != -1:
+            cnt += 1
+            p = cell / 100.0
+        else:
+            p = 0.5
+        if c != None:
+            c *= p
+        else:
+            c = p
+    if cnt > 0:
+        return max(0, min(c * 100.0, 100))
+    else:
+        return -1
+
+def avg3(cells):
+    c = None
+    cnt = 0
+    for (cell, _) in cells:
+        if cell != -1:
+            cnt += 1
+            p = cell / 100.0
+            if c != None:
+                c *= p
+            else:
+                c = p
+    if cnt > 0:
+        return max(0, min(c * 100.0, 100))
+    else:
+        return -1
+
+
 def dst1(cells):
     combined_masses = None
     for (cell, frame_id) in cells:
@@ -126,7 +161,7 @@ class GOmerger:
 
 
 
-            rawMap = pool.map(avg1, gols)
+            rawMap = pool.map(avg3, gols)
 
             # Clip the map between values for ROS standard
             toc = time.process_time()
