@@ -177,7 +177,7 @@ class GOmerger:
             # self.axes[1, 2].set_title("Merged GOL {}".format(GOLout.header.frame_id.split('.')[1]))
             # plt.pause(0.01)
 
-            plt.imsave("/home/caillot/Bureau/GOL_images/gol{}.png".format(GOLout.header.frame_id.split('.')[1]), mapimg)
+            plt.imsave("/home/caillot/Bureau/GOL_images/gol{}.png".format(GOLout.header.frame_id.split('.')[1]), mapimg, vmin=-1, vmax=100, cmap='Greys')
             # GOLout.header.frame_id
 
         self.last_id = int(data.header.frame_id.split('.')[1])
