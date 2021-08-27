@@ -114,6 +114,26 @@ def dst1(cells):
 
     return min(combined_masses.get_mass({"O"}) * 100.0, 100)
 
+def dst2(cells):
+    combined_masses = None
+    for (cell, frame_id) in cells:
+        map_masses = bba1(cell, frame_id)
+
+        if combined_masses == None:
+            combined_masses = copy.deepcopy(map_masses)
+        else:
+            combined_masses = combined_masses.sum(map_masses)
+
+    O = combined_masses.get_mass({"O"})
+    F = combined_masses.get_mass({"F"})
+    OF = combined_masses.get_mass({"O", "F"})
+
+    if OF > O and OF > F:
+        return -1
+    if F > O and F > OF:
+        return 0
+    return 100
+
 class GOmerger:
 
     def __init__(self):
@@ -161,7 +181,7 @@ class GOmerger:
 
 
 
-            rawMap = pool.map(avg3, gols)
+            rawMap = pool.map(dst2, gols)
 
             # Clip the map between values for ROS standard
             toc = time.process_time()

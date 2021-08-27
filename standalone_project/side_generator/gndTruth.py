@@ -64,30 +64,49 @@ def getBBox_points(p):
         raise NameError('No File at %s'%path)
 
 def draw(pts_lst, grid_size, step_grid):
-    raw_map = np.full((grid_size, grid_size), -1, dtype=np.float)
-    for pts_bbox in pts_lst:
+    raw_map = np.full((grid_size, grid_size), 0, dtype=np.float)
+    data = {}
+    data['roi'] = []
+    for i, pts_bbox in enumerate(pts_lst):
         pts=[]
         for pt in pts_bbox:
             x = int(pt[0] / step_grid + (grid_size / 2.0))
             y = int(pt[1] / step_grid + (grid_size / 2.0)) 
             pts.append([x, y])
+        pts_t = np.transpose(np.array(pts))
+        radius = 1.5
+        x_max = np.amax(pts_t[0]) + (radius / step_grid)
+        x_min = np.amin(pts_t[0]) - (radius / step_grid)
+        y_max = np.amax(pts_t[1]) + (radius / step_grid)
+        y_min = np.amin(pts_t[1]) - (radius / step_grid)
+        data['roi'].append({
+            'vehicle': i,
+            'xmin': x_min,
+            'xmax': x_max,
+            "ymin": y_min,
+            "ymax": y_max
+        })
         cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
-    return raw_map
+    return (raw_map, data)
 
-def main(path2json, nv, frame, out="", step_grid=0.2, grid_range=75):
+
+def main(path2json, nv, frame, out="", step_grid=0.2, grid_range=75, outjsonpath=""):
     grid_size = int(2*grid_range/step_grid)
     pts_lst = []
     for v in range(nv):
         jsonPath = path2json%(v, frame)
         pts_lst.append(getBBox_points(jsonPath))
-    gog = draw(pts_lst, grid_size, step_grid)
+    (gog, jsonout) = draw(pts_lst, grid_size, step_grid)
     plt.imsave(out, gog, vmin=-1, vmax=100, cmap='Greys')
+    with open(outjsonpath, 'w') as outfile:
+        json.dump(jsonout, outfile)
 
 
 if __name__ == '__main__':
     p = "/home/caillot/Bureau/gog_gnd_truth/%06d.png"%FRAME
     print("Starting generation")
     for i in tqdm(range(61, 577)):
-        p = "/home/caillot/Bureau/gog_gnd_truth/%06d.png"%i
-        main(PATH, NV, i, out=p)
+        p = "/home/caillot/Bureau/gog_gnd_truth/img/%06d.png"%i
+        p2 = "/home/caillot/Bureau/gog_gnd_truth/json/%06d.json"%i
+        main(PATH, NV, i, out=p, outjsonpath=p2)
     print("Generation finished")
