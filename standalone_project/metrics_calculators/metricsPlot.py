@@ -2,15 +2,24 @@ import numpy as np
 from os import path
 import matplotlib.pyplot as plt
 import pandas as pd
+import sys
 
 OUT_LABEL = "resultsNoNoise"
+# try:
+#     TH = int(sys.argv[1])
+# except:
+#     print("no arg")
+#     TH = 127
+TH = 50
 
 # FILES
-names = ["avg2", "avg3", "dst1"] #  , "dst2"
+colors = ["red", "blue", "green", "orange", "yellow"]
+names = ["avg2", "avg3", "dst1", "dst2"] #  , "dst2"
 # PATH = "/home/caillot/Bureau/Results/out_128/iou_%s.csv"
-PATH = "/home/caillot/Bureau/Results/out_128_2/%s_metrics.csv"
+PATH = "/home/caillot/Bureau/Results/outs/%s_metrics_%d.csv"
 # PATH = "/home/caillot/Bureau/Results/%s_metrics.csv"
-PATH_OUT = "/home/caillot/Documents/PhD/Papiers/Multi-agent-cooperative-camera-based-occupancy-grid-generation/res3.tex"
+PATH_OUT = "/home/caillot/Documents/PhD/Papiers/Multi-agent-cooperative-camera-based-occupancy-grid-generation/res/res%d.tex"
+PATH_CURV = "/home/caillot/Documents/PhD/Papiers/Multi-agent-cooperative-camera-based-occupancy-grid-generation/res/curv%d_%s.dat"
 
 # SEQUENCES
 seq = []
@@ -26,7 +35,7 @@ seq_out = []
 
 th = 0.0
 for filename in names:
-    p = PATH%filename
+    p = PATH%(filename, TH)
     df = pd.read_csv(p, index_col="Frame")
     seq_iou = []
     seq_F1 = []
@@ -62,7 +71,7 @@ for filename in names:
         print("TN_ : %f, TP_: %f, FN_: %f, FP_: %f"%(TN, TP, FN, FP))
     seq_out.append((filename, seq_iou, seq_F1))
 
-f = open(PATH_OUT, 'w')
+f = open(PATH_OUT%TH, 'w')
 f.write("\\begin{table*}\n\\centering\n\n\\begin{tabular}{ |c|c|")
 for _ in range(len(seq)):
     f.write("c|")
@@ -84,8 +93,34 @@ for s in seq_out:
     f.write("\\\\\n\\hline\n")
     
 f.write("\\end{tabular}\n")
-f.write("\\caption{IoU and F1 scores given for each sequence with a threshold of detection of 0.5 (normailmized).}\n")
-f.write("\\label{tab:%s}\n\\end{table*}"%OUT_LABEL)
+f.write("\\caption{IoU and F1 scores given for each sequence with a threshold of detection of %.3f (normailmized).}\n"%(TH/254))
+f.write("\\label{tab:%s}\n\\end{table*}\n\n\n"%OUT_LABEL)
 
+f.write("\\begin{figure*}\n\\centering\n\\begin{tikzpicture}\n\\begin{axis}[\nlegend columns=-1,\nxmin = 70, xmax = 490,\nymin = 0, ymax = 0.65,\nxtick distance = 50,\nytick distance = 0.1,\ngrid = both,\nminor tick num = 1,\nmajor grid style = {lightgray},\nminor grid style = {lightgray!25},\nwidth = \\textwidth,\nheight = 0.25\\textwidth,\nxlabel = {frame},\nylabel = {IoU},]\n\n")
+
+for i, filename in enumerate(names):
+    p = PATH%(filename, TH)
+    pdat = PATH_CURV%(TH, filename)
+    df = pd.read_csv(p, index_col="Frame")
+    # print(df.info)
+    tot = df.shape[0]
+    fdat = open(pdat, 'w')
+    fdat.write("x \ty\n")
+    for x in range(0, tot):
+        try:
+            y = df.loc[x+70]['IoU']
+            fdat.write("%f \t%f\n"%(x+70, y))
+        except KeyError:
+            print("not found")
+    fdat.close()
+    f.write("\\addplot[smooth,thin,%s] file[skip first] {res/%s};\n"%(colors[i], path.basename(pdat)))
+
+f.write("\\legend{")
+for filename in names:
+    f.write("%s,"%filename)
+
+f.write("}\n\end{axis}\n\\end{tikzpicture}\n\\caption{Evolution of the IoU thoughout the frames with a threshold of detection of %.3f (normailmized).}\n\\label{fig:graph_%d}\n\\end{figure*}"%(TH/254, TH))
+
+f.write("\\begin{tikzpicture}")
+f.write("\\end{tikzpicture}")
 f.close()
-

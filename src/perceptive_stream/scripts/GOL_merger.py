@@ -55,7 +55,7 @@ def bba0(cell, frame_id):
                 
     return DST([({"O"}, O), ({"F"}, F), ({"O", "F"}, OF)])
 
-def avg1(cells):
+def avg0(cells):
     avg = 0.0
     cnt = 0
     for (cell, _) in cells:
@@ -67,7 +67,7 @@ def avg1(cells):
     else:
         return -1
 
-def avg2(cells):
+def avg1(cells):
     c = None
     cnt = 0
     for (cell, _) in cells:
@@ -85,7 +85,7 @@ def avg2(cells):
     else:
         return -1
 
-def avg3(cells):
+def avg2(cells):
     c = None
     cnt = 0
     for (cell, _) in cells:
