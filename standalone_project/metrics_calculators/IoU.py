@@ -10,8 +10,8 @@ from os import fpathconf, path
 import sys
 
 PATH_GND = "/home/caillot/Bureau/Results/gog_gnd_truth/img/%06d.png"
-PATH_A = "/home/caillot/Bureau/Results/avg2/gol%d.png"
-PATH_B = "/home/caillot/Bureau/Results/avg3/gol%d.png"
+PATH_A = "/home/caillot/Bureau/Results/avg1/gol%d.png"
+PATH_B = "/home/caillot/Bureau/Results/avg2/gol%d.png"
 PATH_C = "/home/caillot/Bureau/Results/dst1/gol%d.png"
 PATH_D = "/home/caillot/Bureau/Results/dst2/gol%d.png"
 PATH_CSV = "/home/caillot/Bureau/Results/outs/%s_metrics_%d.csv"
