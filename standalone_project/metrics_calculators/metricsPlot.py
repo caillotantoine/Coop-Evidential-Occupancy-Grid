@@ -12,11 +12,12 @@ OUT_LABEL = "resultsNoNoise"
 #     TH = 127
 
 
+
 # FILES
 colors = ["red", "blue", "green", "orange", "yellow"]
 names = ["avg1", "avg2", "dst1", "dst2"] #  , "dst2"
 # PATH = "/home/caillot/Bureau/Results/out_128/iou_%s.csv"
-PATH = "/home/caillot/Bureau/Results/outs/%s_metrics_%d.csv"
+PATH = "/home/caillot/Bureau/Results_3/outs/%s_metrics_%d.csv"
 # PATH = "/home/caillot/Bureau/Results/%s_metrics.csv"
 PATH_OUT = "/home/caillot/Documents/PhD/Papiers/Multi-agent-cooperative-camera-based-occupancy-grid-generation/res/res%d.tex"
 PATH_CURV = "/home/caillot/Documents/PhD/Papiers/Multi-agent-cooperative-camera-based-occupancy-grid-generation/res/curv%d_%s.dat"
@@ -56,7 +57,7 @@ for th_idx in [2, 3, 4, 5, 7.5, 10]:
                         tn = df.loc[i]['TN']
                         fn = df.loc[i]['FN']
                     except KeyError:
-                        print("Missing data at : %d"%i)
+                        print("Missing data at : %d - %s"%(i, filename))
                         continue
                     else: 
                         TP += tp
@@ -113,7 +114,7 @@ for th_idx in [2, 3, 4, 5, 7.5, 10]:
                 y = df.loc[x+70]['IoU']
                 fdat.write("%f \t%f\n"%(x+70, y))
             except KeyError:
-                print("not found")
+                print("not found - %d, %s"%(x+70, filename))
         fdat.close()
         f.write("\\addplot[smooth,thin,%s] file[skip first] {res/%s};\n"%(colors[i], path.basename(pdat)))
 
@@ -125,4 +126,5 @@ for th_idx in [2, 3, 4, 5, 7.5, 10]:
 
     f.write("\\begin{tikzpicture}")
     f.write("\\end{tikzpicture}")
+    
     f.close()

@@ -28,7 +28,7 @@ def talker():
     rospy.loginfo("Vehicle ID : %s"%vehicle_ID)
 
 
-    pub = rospy.Publisher('car/info', BBox3D, queue_size=10)
+    pub = rospy.Publisher('car/info', BBox3D, queue_size=100)
     rate = rospy.Rate(rate)
 
 

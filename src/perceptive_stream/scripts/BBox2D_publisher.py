@@ -17,9 +17,13 @@ from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D, BBox2D
 import copy
+from collections import namedtuple
 
 from utils.bbox_manager import BBoxManager
 from utils.queue_manager import QueueROSmsgs
+
+Pos_error = namedtuple('Pos_error', 'x y z')
+Rot_error = namedtuple('Rot_error', 'x y z')
 
 class BBoxExtractor:
     #pub : the publisher
@@ -29,11 +33,16 @@ class BBoxExtractor:
         # init ROS 
         rospy.init_node("bbox_extractor", anonymous=True)
         queue_size = rospy.get_param('~queue_size')
+        self.px_noise = rospy.get_param('~px_noise')
+        self.XY_trans_nois = rospy.get_param('~XY_trans_nois')
+        self.Z_trans_nois = rospy.get_param('~Z_trans_nois')
+        self.XY_rot_nois = rospy.get_param('~XY_rot_nois')
+        self.Z_rot_nois = rospy.get_param('~Z_rot_nois')
 
         # create a publisher
-        self.pub = rospy.Publisher('projector/img', Image, queue_size=10)
+        self.pub = rospy.Publisher('projector/img', Image, queue_size=100)
         self.pub_mutex = Lock()
-        self.pub_bbox = rospy.Publisher('projector/bbox2d', BBox2D, queue_size=10)
+        self.pub_bbox = rospy.Publisher('projector/bbox2d', BBox2D, queue_size=100)
         # self.pub_bbox_mutex = Lock()
 
         # Creat an OpenCV bridge
@@ -76,7 +85,7 @@ class BBoxExtractor:
 
         if len(listOfBBox) > 0:
             # If there are some bounding box, draw them on the image
-            (img_msg, bbox2D) = self.bboxMgr.draw2DBoxes(data, listOfBBox)
+            (img_msg, bbox2D) = self.bboxMgr.draw2DBoxes(data, listOfBBox, pxNoise=self.px_noise, pos_err=Pos_error(self.XY_trans_nois, self.XY_trans_nois, self.Z_trans_nois), rot_err=Rot_error(np.pi/180.0*self.XY_rot_nois, np.pi/180.0*self.XY_rot_nois, np.pi/180.0*self.Z_rot_nois))
             bbox2D.header = data.header
         else:
             # if there is no bounding box, just pipe the image

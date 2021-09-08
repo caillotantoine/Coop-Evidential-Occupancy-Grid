@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-from codecs import xmlcharrefreplace_errors
-from typing import NamedTuple
-from numpy.core.numerictypes import obj2sctype
+# from codecs import xmlcharrefreplace_errors
+# from typing import NamedTuple
+# from numpy.core.numerictypes import obj2sctype
 import rospy
 import open3d as o3d
 from sensor_msgs.msg import RegionOfInterest, CameraInfo
@@ -17,13 +17,65 @@ import numpy as np
 import cv2
 from collections import namedtuple
 import time
+import multiprocessing as mp
+import copy
 
 from nav_msgs.msg import OccupancyGrid
 
 Pos_error = namedtuple('Pos_error', 'x y z')
 Rot_error = namedtuple('Rot_error', 'x y z')
 
+def compute_roi_fast(args):
+    tic = time.process_time()
+    (roi, cam_pos, K_inv, grid, gnd_plane) = copy.deepcopy(args)
+    
+    vertex = [] # extract each 
+    pts_bbox = []
+    cam = vec4n(0, 0, 0)
+    cam = np.matmul(cam_pos, cam)
+    pts_bbox.append([cam[i][0] for i in range(3)])
+    
+    vertex.append(vec3(roi.x_offset, roi.y_offset, 1))
+    vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset, 1))
+    vertex.append(vec3(roi.x_offset + roi.width, roi.y_offset + roi.height, 1))
+    vertex.append(vec3(roi.x_offset, roi.y_offset + roi.height, 1))
+    (grid_range, grid_size, step_grid) = grid
 
+    for p in vertex:
+        ps = np.matmul(K_inv, p) * (grid_range * 1.5)
+        controlPS = np.matmul(K_inv, p) * 1.0
+        pg = np.matmul(cam_pos, vec3tovec4(ps))
+        controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
+        L = plucker.line(cam, pg)
+        fp_pt = plucker.interLinePlane(L, gnd_plane)
+        
+        if np.isnan(getNormVec4(fp_pt)) or pg[2][0] >= controlPG[2][0]:
+            v = [normVec4(pg)[i][0] for i in range(3)]
+            v[2] = 0
+            pts_bbox.append(v)
+        else:
+            pts_bbox.append([normVec4(fp_pt)[i][0] for i in range(3)])
+
+    # raw_map = np.full((grid_size, grid_size), -1, dtype=np.float)
+
+    pts = []
+    for pt in pts_bbox[1:]:
+        x = int(pt[0] / step_grid + (grid_size / 2.0))
+        y = int(pt[1] / step_grid + (grid_size / 2.0))
+        pts.append([x, y])
+
+    
+    # cv2.fillPoly(raw_map, pts=[np.array(pts)], color=100)
+    toc = time.process_time()
+    # rospy.logwarn("Computed 1 particles in {}s".format(toc-tic))
+    return pts #raw_map
+
+def draw_fast(args):
+    (buf, cam_map, new_map) = args
+    cv2.fillPoly(buf, pts=[np.array(cam_map)], color=0)
+    if new_map != None:
+        cv2.fillPoly(buf, pts=[np.array(new_map)], color=100)
+    return buf
 
 class Projector:
 
@@ -36,7 +88,7 @@ class Projector:
     #       pts_bbox : 
     #       footprint_pts : 
 
-    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0)), step_grid = 0.2, grid_range = 75):
+    def __init__(self, bboxes: BBox2D, gnd_plane = (vec4n(0, 0, 0), vec4n(1, 1, 0), vec4n(1, 0, 0)), step_grid = 0.2, grid_range = 75, N_part=1, px_noise=0.0, trans_noise=(0.0, 0.0), rot_noise=(0.0, 0.0)):
         self.step_grid = step_grid
         self.grid_range = grid_range
         self.grid_size = int(2*self.grid_range/self.step_grid)
@@ -54,28 +106,102 @@ class Projector:
         self.worked_ROI = []
 
         imgROI = RegionOfInterest(x_offset = 0, y_offset = 0, width = bboxes.cam_info.width, height = bboxes.cam_info.height)
+        # rospy.logerr("N part = {}".format(N_part))
         
 
         tic = time.process_time()
-        (a, b) = self.compute_noisy_roi(roi=imgROI, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=0.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
-        # (a, b) = self.compute_roi(roi=imgROI, cam_pos=self.cam_pos_mat, log=True)
-        b = np.minimum(b, len(ROIs))
-        self.worked_ROI.append((a, b))
-
-        
-
-        # if bboxes.header.frame_id.split('.')[0] == "Infra_camRGB":
-        #     rospy.logwarn(a)
-
-        for roi in ROIs: # For each ROI
-            proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=30, pix_err=5.0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
-            # proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, N_particles=1, pix_err=0.0, pos_err=Pos_error(0, 0, 0), rot_err=Rot_error(0, 0, 0))
-            # proj_roi = self.compute_roi(roi=roi, cam_pos=self.cam_pos_mat)
+        # (a, b) = self.compute_noisy_roi(roi=imgROI, cam_pos=self.cam_pos_mat, N_particles=N_part, pix_err=0, pos_err=Pos_error(0.1, 0.1, 0.01), rot_err=Rot_error(np.pi/180.0/5.0, np.pi/180.0/5.0, np.pi/180.0*3.0/2.0))
+        # # (a, b) = self.compute_roi(roi=imgROI, cam_pos=self.cam_pos_mat, log=True)
+        # b = np.minimum(b, len(ROIs))
+        # self.worked_ROI.append((a, b))
+        self.pool = mp.Pool(mp.cpu_count()-2)
+        if len(ROIs) == 0:
+            proj_roi = self.compute_noisy_roi(roi=None, cam_pos=self.cam_pos_mat, cam_roi=imgROI, N_particles=N_part, pix_err=px_noise) # No position error for the infrastructure
             self.worked_ROI.append(proj_roi)
+        
+        # rospy.logerr("CPU count %d"%mp.cpu_count())
+        for roi in ROIs: # For each ROI
+            if bboxes.header.frame_id.split('.')[0] == "Infra_camRGB":
+                proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, cam_roi=imgROI, N_particles=N_part, pix_err=px_noise) # No position error for the infrastructure
+            else:
+               proj_roi = self.compute_noisy_roi(roi=roi, cam_pos=self.cam_pos_mat, cam_roi=imgROI, N_particles=N_part, pix_err=px_noise, pos_err=Pos_error(trans_noise[0], trans_noise[0], trans_noise[1]), rot_err=Rot_error(np.pi/180.0*rot_noise[0], np.pi/180.0*rot_noise[0], np.pi/180.0*rot_noise[1])) 
+            self.worked_ROI.append(proj_roi)
+        self.pool.close()
         toc = time.process_time()
         rospy.loginfo("Computed {} ROI of {} in {}s.".format(len(ROIs)+1, bboxes.header.frame_id, toc-tic))
 
-    def compute_noisy_roi(self, roi: RegionOfInterest, cam_pos, N_particles, pix_err=0.0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)):
+    def compute_noisy_roi(self, roi: RegionOfInterest, cam_pos, cam_roi, N_particles, pix_err=0.0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)): 
+        grid = (self.grid_range, self.grid_size, self.step_grid)
+        t = cam_pos[:3, 3]
+        r = cam_pos[:3, :3]
+        r = R.from_dcm(r)
+        r_euler=R.as_euler(r, "xyz")
+        noiseT = np.random.normal(loc=t, scale=[pos_err.x, pos_err.y, pos_err.z], size=(N_particles, 3))
+        noiseR = np.random.normal(loc=r_euler, scale=[rot_err.x, rot_err.y, rot_err.z], size=(N_particles, 3))
+
+        noised_tools = []
+        noised_tools_A = []
+        noised_tools_B = []
+
+        if roi != None:
+            ox = np.random.normal(loc = roi.x_offset, scale = pix_err, size=N_particles)
+            oy = np.random.normal(loc = roi.y_offset, scale = pix_err, size=N_particles)
+            w = np.random.normal(loc = roi.width, scale = pix_err, size=N_particles)
+            h = np.random.normal(loc = roi.height, scale = pix_err, size=N_particles)
+            
+        for i in range(N_particles):
+            if roi != None:
+                noisyROI = RegionOfInterest(x_offset = int(ox[i]), y_offset = int(oy[i]), width = int(w[i]), height = int(h[i]))
+            newT = np.identity(4)
+            newT[:3, :3] = R.from_euler('xyz', noiseR[i]).as_dcm()
+            newT[:3, 3] = noiseT[i]
+            # noised_tools.append((noisyROI, cam_roi, newT))
+            if roi != None:
+                noised_tools_A.append((noisyROI, newT, self.K_inv, grid, self.gnd_plane))
+            noised_tools_B.append((cam_roi, newT, self.K_inv, grid, self.gnd_plane))
+        toc = time.process_time()
+        # rospy.logerr("Generate particles in {}s".format(toc-tic))
+
+        tic = time.process_time()
+        maps = []       
+        
+        cam_map = self.pool.map(compute_roi_fast, noised_tools_B)
+        if roi != None:
+            new_map = self.pool.map(compute_roi_fast, noised_tools_A)
+        else:
+            new_map = [None for _ in range(len(cam_map))]
+        toc = time.process_time()
+        # rospy.logerr("Compute Pools in {}s".format(toc-tic))
+
+        tic = time.process_time()
+        if roi != None:
+            (initial_pts_bbox, _) = self.compute_roi(roi=roi, cam_pos=cam_pos)
+        else:
+            (initial_pts_bbox, _) = self.compute_roi(roi=cam_roi, cam_pos=cam_pos)
+        buf = np.full((self.grid_size, self.grid_size), -1, dtype=np.float)
+        vals = []
+        for i in range(len(cam_map)):
+            vals.append((copy.deepcopy(buf), cam_map[i], new_map[i]))
+
+        outs = []
+        for a in vals:
+            outs.append(draw_fast(a))   
+        toc = time.process_time()
+        # rospy.logerr("Compute maps in {}s".format(toc-tic))
+        
+        
+        tic = time.process_time()
+        smap = np.sum(outs, axis=0)
+        smap = np.divide(smap, N_particles)
+        smap = np.minimum(smap, 100)
+        toc = time.process_time()
+        # rospy.logerr("Merge particules in {}s".format(toc-tic))
+
+        # rospy.logerr("Shape : {}".format(np.shape(raw_map)))
+
+        return (initial_pts_bbox, smap)
+
+    def compute_noisy_roi_old(self, roi: RegionOfInterest, cam_pos, cam_roi, N_particles, pix_err=0.0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)):
         (initial_pts_bbox, raw_map) = self.compute_roi(roi=roi, cam_pos=cam_pos)
         
         ox = np.random.normal(loc = roi.x_offset, scale = pix_err, size=N_particles)
@@ -100,16 +226,11 @@ class Projector:
             newT[:3, :3] = R.from_euler('xyz', noiseR[i]).as_dcm()
             newT[:3, 3] = noiseT[i]
 
+            (_, cam_map) = self.compute_roi(roi=cam_roi, cam_pos=newT)
+            cam_map = np.minimum(cam_map, 0)
             (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
-            raw_map = np.add(raw_map, new_map)
-            # rospy.logerr("Tcam :\n{}\nnewT :\n{}".format(cam_pos, newT))
-            # try:
-            #     (_, new_map) = self.compute_roi(roi=noisyROI, cam_pos=newT)
-            # except OverflowError:
-            #     rospy.logerr('Error with ROI:\n{}'.format(noisyROI))
-            # else:
-            #     raw_map = np.add(raw_map, new_map)
-            #     count = count + 1
+            merged_map = np.maximum(cam_map, new_map)
+            raw_map = np.add(raw_map, merged_map)
 
         raw_map = np.divide(raw_map, N_particles)
         raw_map = np.minimum(raw_map, 100)
@@ -134,25 +255,6 @@ class Projector:
             controlPG = np.matmul(cam_pos, vec3tovec4(controlPS))
             L = plucker.line(cam, pg)
             fp_pt = plucker.interLinePlane(L, self.gnd_plane)
-
-            # if getNormVec4(fp_pt) > self.grid_range:
-            #     # rospy.logerr("Out of Range.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-            #     v = [normVec4(pg)[i][0] for i in range(3)]
-            #     v[2] = 0
-            #     pts_bbox.append(v)
-            # elif np.isnan(getNormVec4(fp_pt)):
-            #     # rospy.logerr("Plucker error.\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-            #     v = [normVec4(pg)[i][0] for i in range(3)]
-            #     v[2] = 0
-            #     pts_bbox.append(v)
-            # elif pg[2][0] >= controlPG[2][0]:
-            #     # rospy.logerr("Ray pointing the sky\nOut : {} -> {}".format(np.transpose(normVec4(fp_pt)), getNormVec4(fp_pt)))
-            #     # rospy.logwarn(">>> {}\n{}".format(np.transpose(pg), roi))
-            #     v = [normVec4(pg)[i][0] for i in range(3)]
-            #     v[2] = 0
-            #     pts_bbox.append(v)
             
             if np.isnan(getNormVec4(fp_pt)) or pg[2][0] >= controlPG[2][0]:
                 v = [normVec4(pg)[i][0] for i in range(3)]

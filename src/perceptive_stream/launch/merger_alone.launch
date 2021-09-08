@@ -1,0 +1,25 @@
+<launch>
+    <!-- Global parameters -->
+    <param name="rate" type="double" value="0.4"/>
+
+    <param name="out_map_path" value="/home/caillot/Bureau/avg1"/>
+    <param name="N_particles" type="int" value="30"/>
+
+    <!-- Nodes -->
+    <node pkg="rosbag" type="play" name="rosbag_play_GOLs" args="-r 1.2 --queue=1000 /home/caillot/Bureau/gols_debug_demux.bag "/> 
+
+
+    <node pkg="topic_tools" type="mux" name="gmux1" args="/projector/GOL /projector/GOL_1 " />
+    <node pkg="topic_tools" type="mux" name="gmux2" args="/projector/GOL /projector/GOL_2 " />
+    <node pkg="topic_tools" type="mux" name="gmux3" args="/projector/GOL /projector/GOL_3 " />
+    <node pkg="topic_tools" type="mux" name="gmux4" args="/projector/GOL /projector/GOL_4 " />
+
+
+
+    <!-- Aggregate GOL -->
+
+    <node pkg="perceptive_stream" type="GOL_merger.py" name="gol_merger" output="screen" required="true">
+        <param name="algo" type="string" value="avg1"/> 
+    </node>
+
+</launch>

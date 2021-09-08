@@ -27,7 +27,7 @@ def talker():
     bridge = CvBridge()
     img_msg = Img()
     
-    pub = rospy.Publisher('camera/image', Img, queue_size=10)
+    pub = rospy.Publisher('camera/image', Img, queue_size=100)
     rospy.init_node('Camera_Publisher', anonymous=True)
     
 

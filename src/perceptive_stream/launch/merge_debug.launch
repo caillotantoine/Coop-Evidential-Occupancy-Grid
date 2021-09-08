@@ -1,9 +1,9 @@
 <launch>
     <!-- Global parameters -->
-    <param name="starting" type="int" value="150"/> <!-- 61 -->
-    <param name="rate" type="double" value="0.4"/>
+    <param name="starting" type="int" value="65"/> <!-- 61 -->
+    <param name="rate" type="double" value="0.3"/>
 
-    <param name="out_map_path" value="/home/caillot/Bureau/dst2"/>
+    <param name="out_map_path" value="/home/caillot/Bureau/GOL_images"/>
     <param name="N_particles" type="int" value="30"/>
 
     <!-- Nodes -->
@@ -39,7 +39,7 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V0/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V0/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V0_camRGB."/>
-        <remap from="camera/image" to="camera/image_1"/>
+        <remap from="camera/image" to="camera/image_2"/>
     </node>
 
     <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V1_camRGB" output="screen">
@@ -47,7 +47,7 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V1/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V1_camRGB."/>
-        <remap from="camera/image" to="camera/image_1"/>
+        <remap from="camera/image" to="camera/image_3"/>
     </node>
 
     <node pkg="perceptive_stream" type="readCamStream.py" name="dataset_V2_camRGB" output="screen">
@@ -55,7 +55,7 @@
         <param name="npy_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V2/cameraRGB/cameraMatrix.npy" />
         <param name="img_path" value="/home/caillot/Documents/Dataset/CARLA_Dataset_A/Embed/V2/cameraRGB/%06d.png" />
         <param name="sensor_ID" value="V2_camRGB."/>
-        <remap from="camera/image" to="camera/image_1"/>
+        <remap from="camera/image" to="camera/image_4"/>
     </node>
 
     <!-- Extract 2D bounding box -->
@@ -88,6 +88,35 @@
         <remap from="projector/bbox2d" to="projector/bbox2d_2"/>
     </node>
 
+    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_inf_3" output="screen" required="true">
+        <param name="queue_size" type="int" value="100"/>
+        <!-- Detection noise -->
+        <!-- Translation https://www.researchgate.net/profile/Rozh-Abdulmajed/publication/332901201_ACCURACY_COMPARISON_BETWEEN_GPS_ONLY_AND_GPS_PLUS_GLONASS_IN_RTK_AND_STATIC_METHODS/links/5cd12e16299bf14d957cea8a/ACCURACY-COMPARISON-BETWEEN-GPS-ONLY-AND-GPS-PLUS-GLONASS-IN-RTK-AND-STATIC-METHODS.pdf -->
+        <!-- Rotation deviation data retrieved from https://hal.archives-ouvertes.fr/hal-02401918/file/Lecrosnier2019b.pdf -->
+        <param name="px_noise" type="double" value="5"/> <!-- pixels -->
+        <param name="XY_trans_nois" type="double" value="0.00243"/> <!-- meters -->  
+        <param name="Z_trans_nois" type="double" value="0.0518"/> <!-- meters --> 
+        <param name="XY_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <param name="Z_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <remap from="camera/image" to="camera/image_3"/>
+        <remap from="projector/bbox2d" to="projector/bbox2d_3"/>
+    </node>
+
+    <node pkg="perceptive_stream" type="BBox2D_publisher.py" name="BBox2D_publisher_inf_4" output="screen" required="true">
+        <param name="queue_size" type="int" value="100"/>
+        <!-- Detection noise -->
+        <!-- Translation https://www.researchgate.net/profile/Rozh-Abdulmajed/publication/332901201_ACCURACY_COMPARISON_BETWEEN_GPS_ONLY_AND_GPS_PLUS_GLONASS_IN_RTK_AND_STATIC_METHODS/links/5cd12e16299bf14d957cea8a/ACCURACY-COMPARISON-BETWEEN-GPS-ONLY-AND-GPS-PLUS-GLONASS-IN-RTK-AND-STATIC-METHODS.pdf -->
+        <!-- Rotation deviation data retrieved from https://hal.archives-ouvertes.fr/hal-02401918/file/Lecrosnier2019b.pdf -->
+        <param name="px_noise" type="double" value="5"/> <!-- pixels -->
+        <param name="XY_trans_nois" type="double" value="0.00243"/> <!-- meters -->  
+        <param name="Z_trans_nois" type="double" value="0.0518"/> <!-- meters --> 
+        <param name="XY_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <param name="Z_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <remap from="camera/image" to="camera/image_4"/>
+        <remap from="projector/bbox2d" to="projector/bbox2d_4"/>
+    </node>
+
+
     <!-- Create Local occupancy grid -->
 
     <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_1" output="screen" required="true">
@@ -110,13 +139,51 @@
         <param name="Z_trans_nois" type="double" value="0.0518"/> <!-- meters --> 
         <param name="XY_rot_nois" type="double" value="0.1"/> <!-- degrees -->
         <param name="Z_rot_nois" type="double" value="0.1"/> <!-- degrees -->
-        <remap from="projector/bbox2d" to="projector/bbox2d_2"/>
+        <remap from="projector/bbox2d" to="projector/bbox2d_2"/> 
+        <remap from="projector/GOL" to="projector/GOL_2"/> 
     </node>
+
+    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_3" output="screen" required="true">
+        <param name="queue_size" type="int" value="100"/>
+        <param name="o3d" type="bool" value="false"/>
+        <param name="px_noise" type="double" value="5"/> <!-- pixels -->
+        <param name="XY_trans_nois" type="double" value="0.1"/> <!-- meters -->  
+        <param name="Z_trans_nois" type="double" value="0.0518"/> <!-- meters --> 
+        <param name="XY_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <param name="Z_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <remap from="projector/bbox2d" to="projector/bbox2d_3"/> 
+        <remap from="projector/GOL" to="projector/GOL_3"/> 
+    </node>
+
+    <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_4" output="screen" required="true">
+        <param name="queue_size" type="int" value="100"/>
+        <param name="o3d" type="bool" value="false"/>
+        <param name="px_noise" type="double" value="5"/> <!-- pixels -->
+        <param name="XY_trans_nois" type="double" value="0.1"/> <!-- meters -->  
+        <param name="Z_trans_nois" type="double" value="0.0518"/> <!-- meters --> 
+        <param name="XY_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <param name="Z_rot_nois" type="double" value="0.1"/> <!-- degrees -->
+        <remap from="projector/bbox2d" to="projector/bbox2d_4"/> 
+        <remap from="projector/GOL" to="projector/GOL_4"/> 
+    </node>
+
+    <!-- <node pkg="perceptive_stream" type="bbox2d_to_gol.py" name="bbox2d_to_gol_inf_2" output="screen" required="true">
+        <param name="queue_size" type="int" value="100"/>
+        <param name="o3d" type="bool" value="false"/>
+        <param name="px_noise" type="double" value="5"/> 
+        <param name="XY_trans_nois" type="double" value="0.1"/> 
+        <param name="Z_trans_nois" type="double" value="0.0518"/>  
+        <param name="XY_rot_nois" type="double" value="0.1"/> 
+        <param name="Z_rot_nois" type="double" value="0.1"/> 
+        <remap from="projector/bbox2d" to="projector/bbox2d_2"/>
+    </node> -->
 
     <!-- Aggregate GOL -->
 
-    <node pkg="perceptive_stream" type="GOL_merger.py" name="gol_merger" output="screen" required="true">
-        <param name="algo" type="string" value="dst2"/> 
-    </node>
+    <node pkg="rosbag" type="record" name="rosbag_record_GOLs" args="record -O /home/caillot/Bureau/gols_debug_demux.bag /projector/GOL_1 /projector/GOL_2 /projector/GOL_3 /projector/GOL_4"/> 
+
+    <!-- <node pkg="perceptive_stream" type="GOL_merger.py" name="gol_merger" output="screen" required="true">
+        <param name="algo" type="string" value="dst1"/> 
+    </node> -->
 
 </launch>

@@ -10,8 +10,13 @@ from sensor_msgs.msg import Image, RegionOfInterest
 from cv_bridge import CvBridge, CvBridgeError
 from pyquaternion import Quaternion
 from perceptive_stream.msg import Img, BBox3D, BBox2D
+from scipy.spatial.transform import Rotation as R
+from collections import namedtuple
 
-from utils.utilsant import getTCCw, pose2Tmat
+from utils.utilsant import getTCCw, pose2Tmat, Tmat2pose
+
+Pos_error = namedtuple('Pos_error', 'x y z')
+Rot_error = namedtuple('Rot_error', 'x y z')
 
 class BBoxManager:
     # cv_bridge : bridge openCV <-> ROS
@@ -59,7 +64,7 @@ class BBoxManager:
 
         return self.cv_bridge.cv2_to_imgmsg(cv_img, "bgr8") # convert the openCV image to a ROS Image message
 
-    def draw2DBoxes(self, image: Img, bboxes):
+    def draw2DBoxes(self, image: Img, bboxes, pxNoise=0, pos_err=Pos_error(0.0, 0.0, 0.0), rot_err=Rot_error(0.0, 0.0, 0.0)):
         # take as input the image and the list of bounding box to draw
         # apply the draw to the image
 
@@ -70,6 +75,20 @@ class BBoxManager:
         h, w, depth = cv_img.shape
         color = (0, 255, 0)
         thickness = 2
+
+        
+        # Apply a random noise to the pose to simulate measure's noise from ground truth
+        cam_pos = pose2Tmat(image.pose)
+
+        t = cam_pos[:3, 3]
+        r = cam_pos[:3, :3]
+        r = R.from_dcm(r)
+        r_euler=R.as_euler(r, "xyz")
+        noiseT = np.random.normal(loc=t, scale=[pos_err.x, pos_err.y, pos_err.z])
+        noiseR = np.random.normal(loc=r_euler, scale=[rot_err.x, rot_err.y, rot_err.z])
+        newT = np.identity(4)
+        newT[:3, :3] = R.from_euler('xyz', noiseR).as_dcm()
+        newT[:3, 3] = noiseT
 
         setOfBbox = []
 
@@ -82,7 +101,14 @@ class BBoxManager:
             # rospy.loginfo("Valid bbox: {}".format(valid))
 
             if valid:
-                setOfBbox.append(roi)
+                # Apply a random noise to the bounding box to simulate measure's noise from ground truth
+                ox = max(np.random.normal(loc = roi.x_offset, scale = pxNoise), 0)
+                oy = max(np.random.normal(loc = roi.y_offset, scale = pxNoise), 0)
+                w = np.random.normal(loc = roi.width, scale = pxNoise)
+                h = np.random.normal(loc = roi.height, scale = pxNoise)
+                noisyROI = RegionOfInterest(x_offset = int(ox), y_offset = int(oy), width = int(w), height = int(h))
+                # rospy.logerr(noisyROI)
+                setOfBbox.append(noisyROI)
 
                 for i in range(len(bbox_vert2D_cam)):
                     cv_img = cv.line(cv_img, bbox_vert2D_cam[i], bbox_vert2D_cam[(i+1)%len(bbox_vert2D_cam)], color, thickness)
@@ -90,7 +116,7 @@ class BBoxManager:
         bbox_out = BBox2D()
         bbox_out.header = image.header
         bbox_out.cam_info = image.info
-        bbox_out.cam_pose = image.pose
+        bbox_out.cam_pose = Tmat2pose(newT, False)
         bbox_out.roi = setOfBbox
 
         return (self.cv_bridge.cv2_to_imgmsg(cv_img, "bgr8"), bbox_out) # convert the openCV image to a ROS Image message
