@@ -6,11 +6,29 @@ from copy import deepcopy
 
 
 class vec:
-    def __init__(self) -> None:
-        self.vec = np.transpose(np.array([[.0, .0]]))
+    def __init__(self, x: float, y: float, z: float=0.0, w:float = 0.0) -> None:
+        self.vec = np.transpose(np.array([[x, y, z, w]]))
 
     def get(self):
         return self.vec
+
+    def x(self):
+        return self.vec[0,0]
+
+    def y(self):
+        return self.vec[1,0]
+
+    def z(self):
+        if type(self) == vec3 or type(self) == vec4:
+            return self.vec[2,0]
+        else:
+            return None
+
+    def w(self):
+        if type(self) == vec4:
+            return self.vec[3,0]
+        else:
+            return None
 
     def get_normalized(self):
         vsize = self.vec.size
@@ -100,53 +118,67 @@ class vec:
         else:
             raise Exception(f"{type(self)} * {type(other)} was unexpected")
 
+
+
+
+
 class vec2(vec):
     def __init__(self, x:float, y:float) -> None:
         self.vec = np.transpose(np.array([[x, y]]))
 
+    def vec3(self, z=0.0):
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        return vec3(x, y, z)
+
+    def vec4(self, z=0.0, w=1.0):
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        return vec3(x, y, z, w)
+
+
+
 class vec3(vec):
-    def __init__(self, x:float, y:float, z:float=1.0) -> None:
+    def __init__(self, x:float, y:float, z:float=0.0) -> None:
         self.vec = np.transpose(np.array([[x, y, z]]))
     
-    def toVec4(self):
+    def vec4(self, w=1.0):
         x = self.vec[0,0]
         y = self.vec[1,0]
         z = self.vec[2,0]
-        return vec4(x, y, z)
+        return vec4(x, y, z, w)
+
+    def vec2(self):
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        return vec2(x, y)
+
+    def nvec2(self):
+        v = self.get_normalized()
+        x = v[0,0]
+        y = v[1,0]
+        return vec2(x, y)
+
+
+
+
 
 class vec4(vec):
     def __init__(self, x:float, y:float, z:float, w: float=1.0) -> None:
         self.vec = np.transpose(np.array([[x, y, z, w]]))
 
+    def vec3(self):
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        z = self.vec[2,0]
+        return vec3(x, y, z)
 
-
-
-
-
-def old_vec3(x, y, z):
-    return np.transpose(np.array([[x, y, z]]))
-
-def vec4n(x, y, z):
-    return np.transpose(np.array([[x, y, z, 1.0]]))
-
-def normVec4(v):
-    return v / v[3][0]
-
-def vec3tovec4(v):
-    return np.transpose(np.array([[v[0][0], v[1][0], v[2][0], 1.0]]))
-
-def vec2mat(v):
-    T = np.identity(4)
-    for i, n in enumerate(v):
-        T[i][3] = n
-    return T
-
-def getNormVec4(v):
-    a = normVec4(v)
-    a = np.transpose(a)
-    a = np.square(a)
-    a = np.sum(a)
-    return np.sqrt(a)
+    def nvec3(self):
+        v = self.get_normalized()
+        x = v[0,0]
+        y = v[1,0]
+        z = v[2,0]
+        return vec3(x, y, z)
 
 
 def rotxMat(thetha):
