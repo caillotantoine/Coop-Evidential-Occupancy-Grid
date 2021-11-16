@@ -3,9 +3,11 @@ from vector import vec2, vec3, vec4
 from typing import List
 
 class Bbox:
-    def __init__(self, pose, size) -> None:
+    def __init__(self, pose, size, label:str = "") -> None:
         self.pose = pose
         self.size = size
+        self.label = label
+        
 
     def get_pose(self):
         return self.pose
@@ -13,9 +15,12 @@ class Bbox:
     def get_size(self):
         return self.size
 
+    def get_label(self):
+        return self.label
+
 class Bbox3D(Bbox):
-    def __init__(self, pose:vec3, size:vec3) -> None:
-        super().__init__(pose, size)
+    def __init__(self, pose:vec3, size:vec3, label:str) -> None:
+        super().__init__(pose, size, label)
 
     def set_from_pts(self, points: List[vec3]):
         lpts = []
@@ -44,8 +49,8 @@ class Bbox3D(Bbox):
         return lpts
 
 class Bbox2D(Bbox):
-    def __init__(self, pose:vec2, size:vec2) -> None:
-        super().__init__(pose, size)
+    def __init__(self, pose:vec2, size:vec2, label:str) -> None:
+        super().__init__(pose, size, label)
 
     def set_from_pts(self, points: List[vec2]):
         lpts = []

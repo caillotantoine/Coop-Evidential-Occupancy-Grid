@@ -3,14 +3,31 @@
  
 import numpy as np
 from copy import deepcopy
+from typing import List
+from Tmat import TMat
 
 
 class vec:
     def __init__(self, x: float, y: float, z: float=0.0, w:float = 0.0) -> None:
         self.vec = np.transpose(np.array([[x, y, z, w]]))
 
-    def get(self):
+    def get(self) -> np.ndarray:
         return self.vec
+
+    def set(self, vector):
+        if type(vector) != np.ndarray:
+            v = np.array(vector)
+        else:
+            v = vector
+
+        if len(v.shape) == 2:
+            (a, b) = v.shape
+            if a == 1:
+                self.vect = np.transpose(v)
+            else:
+                self.vec = v
+        elif len(v.shape) == 1:
+            self.vec = np.transpose(np.array([v]))
 
     def x(self):
         return self.vec[0,0]
@@ -44,11 +61,12 @@ class vec:
         v = np.sum(v)
         return np.sqrt(v)
 
-    def to_TMat(self):
+    def to_TMat(self) -> TMat:
         T = np.identity(4)
-        for i, n in enumerate(self.vec):
-            T[i][3] = n
-        return
+        T[0:vec.size, 3] = self.vec.transpose()[0]
+        out = TMat()
+        out.set(T)
+        return out
 
     def __str__(self) -> str:
         out = "<"
@@ -119,9 +137,6 @@ class vec:
             raise Exception(f"{type(self)} * {type(other)} was unexpected")
 
 
-
-
-
 class vec2(vec):
     def __init__(self, x:float, y:float) -> None:
         self.vec = np.transpose(np.array([[x, y]]))
@@ -134,7 +149,7 @@ class vec2(vec):
     def vec4(self, z=0.0, w=1.0):
         x = self.vec[0,0]
         y = self.vec[1,0]
-        return vec3(x, y, z, w)
+        return vec4(x, y, z, w)
 
 
 
@@ -148,53 +163,34 @@ class vec3(vec):
         z = self.vec[2,0]
         return vec4(x, y, z, w)
 
-    def vec2(self):
-        x = self.vec[0,0]
-        y = self.vec[1,0]
-        return vec2(x, y)
-
     def nvec2(self):
         v = self.get_normalized()
         x = v[0,0]
         y = v[1,0]
         return vec2(x, y)
 
-
-
+    def vec2(self):
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        return vec2(x, y)
 
 
 class vec4(vec):
     def __init__(self, x:float, y:float, z:float, w: float=1.0) -> None:
         self.vec = np.transpose(np.array([[x, y, z, w]]))
 
-    def vec3(self):
-        x = self.vec[0,0]
-        y = self.vec[1,0]
-        z = self.vec[2,0]
-        return vec3(x, y, z)
-
-    def nvec3(self):
+    def nvec3(self) -> vec3:
         v = self.get_normalized()
         x = v[0,0]
         y = v[1,0]
         z = v[2,0]
         return vec3(x, y, z)
 
-
-def rotxMat(thetha):
-    c = np.cos(thetha)
-    s = np.sin(thetha)
-    return np.array([[1.0, 0.0, 0.0, 0.0], [0.0, c, -s, 0.0], [0.0, s, c, 0.0], [0.0, 0.0, 0.0, 1.0]])
-
-def rotzMat(thetha):
-    c = np.cos(thetha)
-    s = np.sin(thetha)
-    return np.array([[c, 0.0, s, 0.0], [0.0, 1.0, 0.0, 0.0], [-s, 0.0, c, 0.0], [0.0, 0.0, 0.0, 1.0]])
-
-def rotyMat(thetha):
-    c = np.cos(thetha)
-    s = np.sin(thetha)
-    return np.array([[c, -s, 0.0, 0.0], [s, c, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+    def vec3(self) -> vec3:
+        x = self.vec[0,0]
+        y = self.vec[1,0]
+        z = self.vec[2,0]
+        return vec3(x, y, z)
 
 
 if __name__ == "__main__":
@@ -209,3 +205,18 @@ if __name__ == "__main__":
     print(c-3)
     # print(c^3)
     print(c == c)
+
+    a = np.array([[2, 0, 0, 1], [0, 4, 0, 2], [0, 0, 6, 3], [0, 0, 0, 4]])
+    mat = TMat()
+    mat.set(a)
+    print(mat)
+    mat = mat * 2
+    print(mat)
+    b = vec4(2, 5, 8)
+    print(b)
+    print(mat * b)
+    mat2 = TMat()
+    mat2.set(np.array([[0.43231651186943054, 0.9017219543457031, 0.0, -16.7977352142334], [-0.9017219543457031, 0.43231651186943054, 0.0, 37.92546463012695], [0.0, -0.0, 1.0, 0.8238999247550964], [0.0, 0.0, 0.0, 1.0]]))
+    print(mat2)
+    mat2.handinessLeft2Right()
+    print(mat2)
