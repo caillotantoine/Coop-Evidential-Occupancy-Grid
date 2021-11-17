@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import List
 from scipy.spatial.transform import Rotation as R
 
+
 class TMat:
     def __init__(self) -> None:
         self.tmat = np.identity(4)
@@ -64,13 +65,22 @@ class TMat:
         return out
 
     def __mul__(self, other):
-        from vector import vec4
+        from vector import vec4, vec3
+        from bbox import Bbox3D
         if type(other) == int or type(other) == float:
             res = self.tmat * other
+        elif type(other) == Bbox3D:
+            pose3:vec3 = other.get_pose()
+            pose4:vec4 = pose3.vec4()
+            res:vec4 = self.tmat @ pose4.get()
+            out = vec4(0, 0, 0)
+            out.set(res)
+            other.set_pose(out.nvec3())
+            return other
         else:
             res = self.tmat @ other.get()
         if type(other) == vec4:
-            out = vec4()
+            out = vec4(0, 0, 0)
         else:
             out = TMat()
         out.set(res)

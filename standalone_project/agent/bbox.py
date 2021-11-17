@@ -7,8 +7,10 @@ class Bbox:
         self.pose = pose
         self.size = size
         self.label = label
-        
 
+    def __str__(self) -> str:
+        return f'BBox {self.label} of a size {self.size} @ {self.pose}'
+        
     def get_pose(self):
         return self.pose
     
@@ -18,10 +20,17 @@ class Bbox:
     def get_label(self):
         return self.label
 
+    def set_pose(self, pose):
+        self.pose = pose
+
+    def set_size(self, size):
+        self.size = size
+
 class Bbox3D(Bbox):
     def __init__(self, pose:vec3, size:vec3, label:str) -> None:
         super().__init__(pose, size, label)
 
+    # From a set of points in 3D, find the bounding box
     def set_from_pts(self, points: List[vec3]):
         lpts = []
         for v in points:
@@ -36,6 +45,7 @@ class Bbox3D(Bbox):
         self.pose = vec3(ox, oy,  oz)
         self.size = vec3(sx, sy,  sz)
 
+    # Provide a set of points to draw in space
     def get_pts(self) -> List[vec3]:
         lpts:List[vec3] = []
         lpts.append(vec3(self.pose.x(), self.pose.y(), self.pose.z()))
@@ -52,6 +62,7 @@ class Bbox2D(Bbox):
     def __init__(self, pose:vec2, size:vec2, label:str) -> None:
         super().__init__(pose, size, label)
 
+    # From a set of points in 3D, find the bounding box
     def set_from_pts(self, points: List[vec2]):
         lpts = []
         for v in points:
@@ -64,6 +75,7 @@ class Bbox2D(Bbox):
         self.pose = vec2(ox, oy)
         self.size = vec2(sx, sy)
 
+    # Provide a set of points to draw on a plane
     def get_pts(self) -> List[vec2]:
         lpts:List[vec2] = []
         lpts.append(vec2(self.pose.x(), self.pose.y()))
