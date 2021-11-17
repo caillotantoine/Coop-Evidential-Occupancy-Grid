@@ -5,6 +5,9 @@ from Tmat import TMat
 from bbox import Bbox2D, Bbox3D
 from vector import vec2, vec3, vec4
 from typing import List
+import cv2 as cv
+
+import projector as prj
 
 class Agent:
     def __init__(self, dataset_path:str, id:int) -> None:
@@ -27,7 +30,7 @@ class Agent:
 
     def get_state(self, frame:int): 
         jsonpath = self.mypath  + f'infos/{frame:06d}.json'
-        print(jsonpath)
+        # print(jsonpath)
         with open(jsonpath) as f:
             state_json = json.load(f)
             if self.label == "vehicle":
@@ -66,8 +69,8 @@ class Agent:
         # DEBUG
         #
         # print(self.bbox3d)
-        # print(self.pose)
-        # for s in self.sensorPoses:
+        # print(self.Tpose)
+        # for s in self.sensorTPoses:
         #     print(s)
 
     def get_bbox_w(self):
@@ -76,6 +79,13 @@ class Agent:
 
     def get_visible_bbox(self, frame:int) -> List[Bbox2D]:
         self.get_state(frame)
+        if self.label == "pedestrian":
+            raise Exception("Pedestrian do not have sensors.")
+        kmat_path = self.mypath + "/camera_semantic_segmentation/cameraMatrix.npy"
+        k_mat = prj.load_k(kmat_path)
+        # np.load(kmat_path)
+        print(k_mat)
+        camPose = self.sensorTPoses[0]
         with open(self.dataset_json_path) as dataset_json:
             raw_json = json.load(dataset_json)
 
@@ -84,15 +94,26 @@ class Agent:
             agents = [Agent(self.dataset_path, idx) for idx in visible_user_idx]
             for a in agents:
                 a.get_state(frame)
-                print(a.get_bbox_w())
+                bbox3 = a.get_bbox_w()
+                print(bbox3)
+                bbox2 = prj.projector_filter(bbox3, k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png')
+                print(bbox2)
 
+            img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
+            cv.imshow('image',img)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
+            # bboxes2D = [prj.projector_filter(a.get_bbox_w(), k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png') for a in agents]
+
+            # for b in bboxes2D:
+            #     print(b)
             # print(visible_user_idx)
             # print(agents)
 
 
 if __name__ == "__main__":
     dataset_path:str = '/home/caillot/Documents/Dataset/CARLA_Dataset_B'
-    v0 = Agent(dataset_path=dataset_path, id=13)
+    v0 = Agent(dataset_path=dataset_path, id=18)
     print(v0)
     # v0.get_state(56)
     v0.get_visible_bbox(56)
