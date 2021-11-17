@@ -1,8 +1,8 @@
 import json
-from os import path
+from os import path, symlink
 import numpy as np
 from Tmat import TMat
-from bbox import Bbox3D
+from bbox import Bbox2D, Bbox3D
 from vector import vec2, vec3, vec4
 from typing import List
 
@@ -10,9 +10,10 @@ class Agent:
     def __init__(self, dataset_path:str, id:int) -> None:
         self.dataset_path:str = dataset_path
         self.dataset_json_path:str = dataset_path + f'/information.json'
-        self.pose:TMat = TMat()
-        self.sensorPoses:List[TMat] = []
+        self.Tpose:TMat = TMat()
+        self.sensorTPoses:List[TMat] = []
         self.bbox3d:Bbox3D = None
+        self.myid = id
 
         with open(self.dataset_json_path) as dataset_json:
             info = json.load(dataset_json)
@@ -31,16 +32,16 @@ class Agent:
             state_json = json.load(f)
             if self.label == "vehicle":
                 pose = np.array(state_json['vehicle']['T_Mat'])
-                self.pose.set(pose)
-                self.pose.handinessLeft2Right()
+                self.Tpose.set(pose)
+                self.Tpose.handinessLeft2Right()
 
             elif self.label == "pedestrian":
                 pose = np.array(state_json['sensors'][0]['T_Mat'])
-                self.pose.set(pose)
-                self.pose.handinessLeft2Right()
+                self.Tpose.set(pose)
+                self.Tpose.handinessLeft2Right()
 
             elif self.label == "infrastructure":
-                self.pose = None
+                self.Tpose = None
 
             if self.label == "vehicle" or self.label == "infrastructure":
                 for sens in state_json["sensors"]:
@@ -48,11 +49,50 @@ class Agent:
                     out = TMat()
                     out.set(pose)
                     out.handinessLeft2Right()
-                    self.sensorPoses.append(out)
+                    self.sensorTPoses.append(out)
+
+            if self.label == "vehicle" or self.label == "pedestrian":
+                raw_bbox = state_json["vehicle"]["BoundingBox"]
+                sx = raw_bbox["extent"]["x"]
+                sy = raw_bbox["extent"]["y"]
+                sz = raw_bbox["extent"]["z"]
+                ox = raw_bbox["loc"]["x"] - sx
+                oy = raw_bbox["loc"]["y"] - sy
+                oz = raw_bbox["loc"]["z"] - sz
+                bboxsize = vec3(sx*2.0, sy*2.0, sz*2.0)
+                bbox_pose = vec3(ox, oy, oz)
+                self.bbox3d = Bbox3D(bbox_pose, bboxsize, self.label)
+
+        # DEBUG
+        #
+        # print(self.bbox3d)
+        # print(self.pose)
+        # for s in self.sensorPoses:
+        #     print(s)
+
+    def get_bbox_w(self):
+        return self.Tpose * self.bbox3d
+    
+
+    def get_visible_bbox(self, frame:int) -> List[Bbox2D]:
+        self.get_state(frame)
+        with open(self.dataset_json_path) as dataset_json:
+            raw_json = json.load(dataset_json)
+
+            #every idx where idx != my id and where type is not an infrastructure
+            visible_user_idx:int = [idx for idx, data in enumerate(raw_json["agents"]) if (data["type"]!="infrastructure" and idx != self.myid)]
+            agents = [Agent(self.dataset_path, idx) for idx in visible_user_idx]
+            for a in agents:
+                a.get_state(frame)
+                print(a.get_bbox_w())
+
+            # print(visible_user_idx)
+            # print(agents)
 
 
 if __name__ == "__main__":
     dataset_path:str = '/home/caillot/Documents/Dataset/CARLA_Dataset_B'
-    v0 = Agent(dataset_path=dataset_path, id=0)
+    v0 = Agent(dataset_path=dataset_path, id=13)
     print(v0)
-    v0.get_state(56)
+    # v0.get_state(56)
+    v0.get_visible_bbox(56)
