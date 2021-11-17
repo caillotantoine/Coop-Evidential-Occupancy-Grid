@@ -105,24 +105,38 @@ class vec:
         return out
 
     def __mul__(self, other):
+        out = deepcopy(self)
         if type(other) == type(self):
-            return np.dot(self.get(), other.get())
+            out.set(np.dot(self.get(), other.get()))
         elif type(other) == int or type(other) == float:
-            return np.dot(self.get(), other)
+            out.set(np.dot(self.get(), other))
         else:
             raise Exception(f"{type(self)} * {type(other)} was unexpected")
+        return out
 
-    def __div__(self, other):
+    def __truediv__(self, other):
+        out = deepcopy(self)
         if type(other) == int or type(other) == float:
-            return self.get() / float(other)
+            out.set(self.get() / float(other))
         else:
             raise Exception(f"{type(self)} / {type(other)} was unexpected")
+        return out
+
+    def __floordiv__(self, other):
+        out = deepcopy(self)
+        if type(other) == int or type(other) == float:
+            out.set(self.get() // float(other))
+        else:
+            raise Exception(f"{type(self)} // {type(other)} was unexpected")
+        return out
 
     def __xor__(self, other):
+        out = deepcopy(self)
         if type(self) == type(other):
-            return np.cross(self.get(), other.get())
+            out.set( np.cross(self.get(), other.get()))
         else:
             raise Exception(f"{type(self)} ^ {type(other)} was unexpected")
+        return out
 
     def __eq__(self, other):
         if type(other) == type(self):

@@ -46,6 +46,9 @@ class TMat:
         s = np.sin(theta)
         self.tmat = np.array([[c, -s, 0.0, 0.0], [s, c, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
 
+    def inv(self):
+        self.tmat = np.linalg.inv(self.tmat)
+    
     def __add__(self, other):
         from vector import vec4
         if type(other) == vec4:
