@@ -25,9 +25,8 @@ def load_k(path_k) -> TMat:
     kmat.set(kmat4)
     return kmat
 
-def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, cwTw:TMat, img_path:str, threashold:float = 0.3) -> Bbox2D:
+def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, cwTw:TMat, img, threashold:float = 0.3) -> Bbox2D:
     out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.get_label())
-    img = cv.imread(img_path)
     (h, w, c) = img.shape
     
     cwTc = getCwTc()
@@ -58,40 +57,26 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, cwTw:TMat, img_path:str, t
     sizebbox = out_bbox.get_size()
 
     cropped_img = img[int(posebbox.y()):int(posebbox.y()+sizebbox.y()), int(posebbox.x()):int(posebbox.x()+sizebbox.x()), 2]
-
-    # vehicle : 10
-    # pedestrian : 4
+    
     try:
+        # vehicle : 10
+        # pedestrian : 4
         todetect = 10 if bbox.get_label() == "vehicle" else 4
         unique, counts = np.unique(cropped_img, return_counts=True)
         pix = dict(zip(unique, counts))
         N_detected = pix[todetect]
         ratio = N_detected / cropped_img.size
-        print(f'In {cropped_img.size} pix, deteceted {pix} with {N_detected} of {bbox.get_label()} with a ratio of {ratio*100.0}%')
+        # print(f'In {cropped_img.size} pix, deteceted {pix} with {N_detected} of {bbox.get_label()} with a ratio of {ratio*100.0}%')
     except:
         return None
     if ratio <= threashold:
         return None
-
-
-
-    # cv.imshow('image', )
-    # cv.waitKey(0)
-    # cv.destroyAllWindows()
-    # plt.imshow(cropped_img)
-    # plt.show()
-    
     return out_bbox
 
 
 if __name__ == '__main__':
-    # img_path = '/home/caillot/Documents/Dataset/CARLA_Dataset_B/I000/camera_semantic_segmentation/001769.png'
     img_path = '/home/caillot/Documents/Dataset/CARLA_Dataset_A/Infra/cameraRGB/000051.png'
-    # <4.553, 2.097, 1.767> @ <-2.308, -1.049, 0.007>
-    # <2.207, 1.481, 1.376> @ <2.242, -43.123, -0.017>
-    # bbox3d = Bbox3D(pose=vec3(2.242, -43.123, -0.017), size=vec3(2.207, 1.481, 1.376), label="vehicle")
     bbox3d = Bbox3D(pose=vec3(0.0, 0.0, 0.76), size=vec3(4.553, 2.097, 1.767), label="vehicle")
-    # k = load_k('/home/caillot/Documents/Dataset/CARLA_Dataset_B/I000/camera_semantic_segmentation/cameraMatrix.npy')
     k = load_k('/home/caillot/Documents/Dataset/CARLA_Dataset_A/Infra/cameraRGB/cameraMatrix.npy')
     print(k)
 
@@ -101,21 +86,16 @@ if __name__ == '__main__':
     wTcw = TMat()
     wTcw.set(camtmat)
 
-    # map size
-    map_size = 70
-
     a = np.array([[0.01935034990310669, 0.9998127818107605, 0.0, 4.926102638244629], [-0.9998127818107605, 0.01935034990310669, 0.0, 40.57860565185547], [0.0, -0.0, 1.0, -0.024867916479706764], [0.0, 0.0, 0.0, 1.0]])
     a = np.array([[-0.03497249260544777, -0.9993882775306702, 0.0, -6.446169853210449], [0.9993882775306702, -0.03497249260544777, -0.0, -42.193748474121094], [0.0, -0.0, 1.0, 0.035129792988300323], [0.0, 0.0, 0.0, 1.0]])
     a= np.array([[0.01935034990310669, 0.9998127818107605, 0.0, 4.926102638244629], [-0.9998127818107605, 0.01935034990310669, 0.0, 40.57860565185547], [0.0, -0.0, 1.0, 0.03291169926524162], [0.0, 0.0, 0.0, 1.0]])
     vMat = TMat()
     vMat.set(a)
     
-
     wTcw.handinessLeft2Right()
     vMat.handinessLeft2Right()
 
     bbox = projector_filter(bbox3d, vMat, k, wTcw, img_path)
-
 
     img = cv.imread(img_path)
     color = (0, 255, 0)
@@ -131,11 +111,12 @@ if __name__ == '__main__':
     cv.waitKey(0)
     cv.destroyAllWindows()
 
+    # map size
+    # map_size = 70
+
     # cwTc = getCwTc()
     # wTc = wTcw * cwTc
     # # wTc = wTcw
-
-
 
     # # World ref
     # mesh_world_center = o3d.geometry.TriangleMesh.create_coordinate_frame(size=2, origin=[0, 0, 0])

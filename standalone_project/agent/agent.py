@@ -6,9 +6,11 @@ from bbox import Bbox2D, Bbox3D
 from vector import vec2, vec3, vec4
 from typing import List
 import cv2 as cv
+from tqdm import tqdm
 
 
 import projector as prj
+import matplotlib.pyplot as plt
 
 class Agent:
     def __init__(self, dataset_path:str, id:int) -> None:
@@ -95,14 +97,14 @@ class Agent:
         return self.Tpose
     
 
-    def get_visible_bbox(self, frame:int) -> List[Bbox2D]:
+    def get_visible_bbox(self, frame:int, plot:plt = None) -> List[Bbox2D]:
         self.get_state(frame)
         if self.label == "pedestrian":
             raise Exception("Pedestrian do not have sensors.")
         kmat_path = self.mypath + "/camera_semantic_segmentation/cameraMatrix.npy"
         k_mat = prj.load_k(kmat_path)
         # np.load(kmat_path)
-        print(k_mat)
+        # print(k_mat)
         camPose = self.sensorTPoses[0]
         with open(self.dataset_json_path) as dataset_json:
             raw_json = json.load(dataset_json)
@@ -110,32 +112,36 @@ class Agent:
             #every idx where idx != my id and where type is not an infrastructure
             visible_user_idx:int = [idx for idx, data in enumerate(raw_json["agents"]) if (data["type"]!="infrastructure" and idx != self.myid)]
             agents = [Agent(self.dataset_path, idx) for idx in visible_user_idx]
+
+            img = cv.imread(self.mypath+f'camera_semantic_segmentation/{frame:06d}.png') 
+
             bbox2:List[Bbox2D] = []
             for a in agents:
                 a.get_state(frame)
-                bbox = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png')
-                print(f"\t{bbox}")
+                bbox = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, img)
+                # print(f"\t{bbox}")
                 bbox2.append(bbox)
                 
             bbox2 = [box for box in bbox2 if box != None]
-            print(bbox2)
+            # print(bbox2)
+            
 
-            img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
-            color = (0, 255, 0)
-            thickness = 2
+            if plot != None:
+                img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
+                color = (0, 255, 0)
+                thickness = 2
+                for box in bbox2:
+                    points = box.get_pts()
+                    pts = [tuple(np.transpose(pt.get())[0].astype(int).tolist()) for pt in points]
+                    # print(pts)
+                    for i in range(len(pts)):
+                        img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
+                plot.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
+                plot.draw()
+                plt.pause(0.001)
 
-
-            for box in bbox2:
-                points = box.get_pts()
-                pts = [tuple(np.transpose(pt.get())[0].astype(int).tolist()) for pt in points]
-                print(pts)
-                for i in range(len(pts)):
-                    img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
-
-
-            cv.imshow('image',img)
-            cv.waitKey(0)
-            cv.destroyAllWindows()
+            return bbox2
+                
 
 
 if __name__ == "__main__":
@@ -143,4 +149,9 @@ if __name__ == "__main__":
     v0 = Agent(dataset_path=dataset_path, id=18)
     print(v0)
     # v0.get_state(56)
-    v0.get_visible_bbox(56)
+    for i in tqdm(range(1, 100)):
+        v0.get_visible_bbox(i)
+        
+    
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
