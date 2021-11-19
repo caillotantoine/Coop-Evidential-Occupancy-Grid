@@ -1,18 +1,23 @@
 import numpy as np
 from vector import vec2, vec3, vec4
+from Tmat import TMat
 from typing import List
 
 class Bbox:
-    def __init__(self, pose, size, label:str = "") -> None:
+    def __init__(self, pose, size, rotation, label:str = "") -> None:
         self.pose = pose
         self.size = size
         self.label = label
+        self.rotation = rotation
 
     def __str__(self) -> str:
         return f'BBox {self.label} of a size {self.size} @ {self.pose}'
         
     def get_pose(self):
         return self.pose
+
+    def get_rotation(self):
+        return self.rotation
     
     def get_size(self):
         return self.size
@@ -26,9 +31,12 @@ class Bbox:
     def set_size(self, size):
         self.size = size
 
+    def set_rotation(self, rotation):
+        self.rotation = rotation
+
 class Bbox3D(Bbox):
     def __init__(self, pose:vec3, size:vec3, label:str) -> None:
-        super().__init__(pose, size, label)
+        super().__init__(pose, size, None, label)
 
     # From a set of points in 3D, find the bounding box
     def set_from_pts(self, points: List[vec3]):

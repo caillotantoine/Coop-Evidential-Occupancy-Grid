@@ -71,21 +71,22 @@ class TMat:
         from vector import vec4, vec3
         from bbox import Bbox3D
         if type(other) == int or type(other) == float:
+            out = vec4(0, 0, 0)
             res = self.tmat * other
-        elif type(other) == Bbox3D:
-            pose3:vec3 = other.get_pose()
-            pose4:vec4 = pose3.vec4()
-            res:vec4 = self.tmat @ pose4.get()
-            out = vec4(0, 0, 0)
-            out.set(res)
-            other.set_pose(out.nvec3())
-            return other
-        else:
+        # elif type(other) == Bbox3D:
+        #     out = vec4(0, 0, 0)
+        #     pose3:vec3 = other.get_pose()
+        #     pose4:vec4 = pose3.vec4()
+        #     res:vec4 = self.tmat @ pose4.get()
+        #     out.set(res)
+        #     other.set_pose(out.nvec3())
+        #     return other
+        elif type(other) == vec4:
+            out = vec4(0, 0, 0) 
             res = self.tmat @ other.get()
-        if type(other) == vec4:
-            out = vec4(0, 0, 0)
         else:
-            out = TMat()
+            out = deepcopy(self)
+            res = self.tmat @ other.get()
         out.set(res)
         return out
 

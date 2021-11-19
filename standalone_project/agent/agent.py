@@ -7,6 +7,7 @@ from vector import vec2, vec3, vec4
 from typing import List
 import cv2 as cv
 
+
 import projector as prj
 
 class Agent:
@@ -33,6 +34,10 @@ class Agent:
         # print(jsonpath)
         with open(jsonpath) as f:
             state_json = json.load(f)
+
+            #
+            #   Get pose of the agent
+            #
             if self.label == "vehicle":
                 pose = np.array(state_json['vehicle']['T_Mat'])
                 self.Tpose.set(pose)
@@ -46,6 +51,10 @@ class Agent:
             elif self.label == "infrastructure":
                 self.Tpose = None
 
+
+            #
+            #   Get pose of the sensors
+            #
             if self.label == "vehicle" or self.label == "infrastructure":
                 for sens in state_json["sensors"]:
                     pose = np.array(sens['T_Mat'])
@@ -54,6 +63,9 @@ class Agent:
                     out.handinessLeft2Right()
                     self.sensorTPoses.append(out)
 
+            #                       
+            #   Get bounding box   /!\  MUST BE RELATED WITH Agent's pose.
+            #                     
             if self.label == "vehicle" or self.label == "pedestrian":
                 raw_bbox = state_json["vehicle"]["BoundingBox"]
                 sx = raw_bbox["extent"]["x"]
@@ -73,8 +85,14 @@ class Agent:
         # for s in self.sensorTPoses:
         #     print(s)
 
-    def get_bbox_w(self):
-        return self.Tpose * self.bbox3d
+    # def get_bbox_w(self):
+    #     return self.Tpose * self.bbox3d
+
+    def get_bbox3d(self) -> Bbox3D:
+        return self.bbox3d
+
+    def get_pose(self) -> TMat:
+        return self.Tpose
     
 
     def get_visible_bbox(self, frame:int) -> List[Bbox2D]:
@@ -92,23 +110,32 @@ class Agent:
             #every idx where idx != my id and where type is not an infrastructure
             visible_user_idx:int = [idx for idx, data in enumerate(raw_json["agents"]) if (data["type"]!="infrastructure" and idx != self.myid)]
             agents = [Agent(self.dataset_path, idx) for idx in visible_user_idx]
+            bbox2:List[Bbox2D] = []
             for a in agents:
                 a.get_state(frame)
-                bbox3 = a.get_bbox_w()
-                print(bbox3)
-                bbox2 = prj.projector_filter(bbox3, k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png')
-                print(bbox2)
+                bbox = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png')
+                print(f"\t{bbox}")
+                bbox2.append(bbox)
+                
+            bbox2 = [box for box in bbox2 if box != None]
+            print(bbox2)
 
             img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
+            color = (0, 255, 0)
+            thickness = 2
+
+
+            for box in bbox2:
+                points = box.get_pts()
+                pts = [tuple(np.transpose(pt.get())[0].astype(int).tolist()) for pt in points]
+                print(pts)
+                for i in range(len(pts)):
+                    img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
+
+
             cv.imshow('image',img)
             cv.waitKey(0)
             cv.destroyAllWindows()
-            # bboxes2D = [prj.projector_filter(a.get_bbox_w(), k_mat, camPose, self.mypath+f'camera_semantic_segmentation/{frame:06d}.png') for a in agents]
-
-            # for b in bboxes2D:
-            #     print(b)
-            # print(visible_user_idx)
-            # print(agents)
 
 
 if __name__ == "__main__":
