@@ -13,6 +13,8 @@ class TMat:
 
     def get(self) -> np.ndarray:
         return self.tmat
+
+    
     
     def set(self, mat) -> None:
         self.tmat = mat
@@ -48,6 +50,12 @@ class TMat:
 
     def inv(self):
         self.tmat = np.linalg.inv(self.tmat)
+
+    def get_translation(self):
+        from vector import vec4
+        out = vec4(0, 0, 0)
+        out.set(self.tmat[:4, 3])
+        return out
     
     def __add__(self, other):
         from vector import vec4
@@ -68,7 +76,7 @@ class TMat:
         return out
 
     def __mul__(self, other):
-        from vector import vec4, vec3
+        from vector import vec4
         from bbox import Bbox3D
         if type(other) == int or type(other) == float:
             out = vec4(0, 0, 0)
