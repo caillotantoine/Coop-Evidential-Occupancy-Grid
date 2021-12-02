@@ -3,9 +3,11 @@ from vector import vec2, vec3, vec4
 from Tmat import TMat
 from bbox import Bbox2D, Bbox3D
 from tqdm import tqdm
+from plucker import plkrPlane
+from projector import project_BBox2DOnPlane
 import json
 from typing import List
-
+from EGG import EGG
 
 dataset_path:str = '/home/caillot/Documents/Dataset/CARLA_Dataset_B'
 agents:List[Agent] = []
@@ -19,10 +21,14 @@ for idx, agent in enumerate(agents):
 
 
 a = agents[6]
-visible_bbox:Bbox2D = a.get_visible_bbox(frame=56)
-print(visible_bbox)
+agent_out = a.get_visible_bbox(frame=56)
 
+# gndPlane = plkrPlane()
+# footprints:List[List[vec2]] = [project_BBox2DOnPlane(gndPlane, bbox, kMat=k_mat, sensorT=camT) for bbox in visible_bbox]
+# print([[p.__str__() for p in bbox] for bbox in footprints])
 
+egg = EGG(mapsize=120.0, gridsize=(120*5))
+print(egg.projector_resterizer(agent_out))
 
 # for agent in agents:
 #     print(agent.get_visible_bbox(56))

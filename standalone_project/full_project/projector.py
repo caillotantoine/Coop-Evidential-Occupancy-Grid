@@ -69,7 +69,7 @@ def load_k(path_k) -> TMat:
     return kmat
 
 def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -> Bbox2D:
-    out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.get_label())
+    out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.label)
     
     
     cwTc = getCwTc()

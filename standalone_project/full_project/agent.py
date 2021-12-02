@@ -4,7 +4,7 @@ import numpy as np
 from Tmat import TMat
 from bbox import Bbox2D, Bbox3D
 from vector import vec2, vec3, vec4
-from typing import List
+from typing import List, Tuple
 import cv2 as cv
 from tqdm import tqdm
 
@@ -97,7 +97,7 @@ class Agent:
         return self.Tpose
     
 
-    def get_visible_bbox(self, frame:int, plot:plt = None) -> List[Bbox2D]:
+    def get_visible_bbox(self, frame:int, plot:plt = None) -> Tuple[List[Bbox2D], TMat, TMat]:
         self.get_state(frame)
         if self.label == "pedestrian":
             raise Exception("Pedestrian do not have sensors.")
@@ -140,7 +140,7 @@ class Agent:
                 plot.draw()
                 plt.pause(0.001)
 
-            return bbox2
+            return (bbox2, k_mat, camPose)
                 
 
 
