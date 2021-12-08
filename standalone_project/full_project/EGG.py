@@ -30,13 +30,8 @@ class EGG:
 
         coords = np.array(coords)
         labels = np.array([1 if l == "vehicle" else 2 for l in labels])
-
-
-        print(coords)
-        print(labels)
-        
-
-        
+        # print(coords)
+        # print(labels)
 
         return list_fp
 

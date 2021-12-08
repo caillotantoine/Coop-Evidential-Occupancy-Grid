@@ -1,3 +1,5 @@
+import ctypes
+import numpy as np
 from agent import Agent
 from vector import vec2, vec3, vec4
 from Tmat import TMat
@@ -8,6 +10,12 @@ from projector import project_BBox2DOnPlane
 import json
 from typing import List
 from EGG import EGG
+from ctypes import *
+import matplotlib.pyplot as plt
+
+MAPSIZE = 120.0
+GRIDSIZE = int(MAPSIZE) * 5
+
 
 dataset_path:str = '/home/caillot/Documents/Dataset/CARLA_Dataset_B'
 agents:List[Agent] = []
@@ -23,19 +31,55 @@ for idx, agent in enumerate(agents):
 a = agents[6]
 agent_out = a.get_visible_bbox(frame=56)
 
-# gndPlane = plkrPlane()
-# footprints:List[List[vec2]] = [project_BBox2DOnPlane(gndPlane, bbox, kMat=k_mat, sensorT=camT) for bbox in visible_bbox]
-# print([[p.__str__() for p in bbox] for bbox in footprints])
+
 
 egg = EGG(mapsize=120.0, gridsize=(120*5))
-print(egg.projector_resterizer(agent_out))
+print('-------------------')
+eggout = egg.projector_resterizer(agent_out)
+fp_poly = np.array([np.array([(v.get().T)[0] for v in poly], dtype=np.float32) for (poly, _) in eggout])
+fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 0 for (_, label) in eggout], dtype=
+np.int32)
+print(fp_poly)
+print(fp_label)
 
-# for agent in agents:
-#     print(agent.get_visible_bbox(56))
+rasterizer = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
+rasterizer.test_read_write.argtypes = [ctypes.c_int,
+                                       np.ctypeslib.ndpointer(dtype=np.float32),
+                                       np.ctypeslib.ndpointer(dtype=np.int32),
+                                       np.ctypeslib.ndpointer(dtype=np.uint8)]
+# rasterizer.test_read_write.restype = np.ctypeslib.ndpointer(dtype=np.uint8)
+rasterizer.projector.argtypes = [ctypes.c_int,
+                                 np.ctypeslib.ndpointer(dtype=np.int32),
+                                 np.ctypeslib.ndpointer(dtype=np.float32),
+                                 np.ctypeslib.ndpointer(dtype=np.uint8), 
+                                 ctypes.c_float, 
+                                 ctypes.c_int]
 
 
-# v0 = Agent(dataset_path=dataset_path, id=18)
-# print(v0)
-# # v0.get_state(56)
-# for i in tqdm(range(1, 100)):
-#     v0.get_visible_bbox(i)
+import time
+tic = time.time()
+map = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
+rasterizer.projector(len(fp_label), fp_label, fp_poly, map, MAPSIZE, GRIDSIZE)
+# rasterizer.test_read_write(len(fp_label), fp_poly, fp_label, map)
+toc = time.time()
+A = toc-tic
+plt.imshow(map)
+plt.show()
+# print(toc-tic)
+
+tic = time.time()
+mapb = np.empty(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
+rasterizer.projector(len(fp_label), fp_label, fp_poly, mapb, MAPSIZE, GRIDSIZE)
+# rasterizer.test_read_write(len(fp_label), fp_poly, fp_label, map)
+toc = time.time()
+B = toc-tic
+plt.imshow(mapb)
+plt.show()
+print(A)
+print(B)
+
+
+# print(map)
+# map = np.ctypeslib.as_array(map, shape=(120*5* 120*5, ))
+
+# print(map.shape)

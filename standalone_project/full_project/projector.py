@@ -120,7 +120,7 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
 def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat, vMat:TMat = None, vbbox3d:Bbox3D = None, debug = None) -> List[vec2]:
     invK = deepcopy(kMat)
     invK.inv()
-    print(invK)
+    # print(invK)
 
     cwTc = getCwTc()
     wTcw = sensorT
