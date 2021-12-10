@@ -13,6 +13,8 @@ from EGG import EGG
 from ctypes import *
 import matplotlib.pyplot as plt
 
+import rasterizer
+
 MAPSIZE = 120.0
 GRIDSIZE = int(MAPSIZE) * 5
 
@@ -42,24 +44,36 @@ np.int32)
 print(fp_poly)
 print(fp_label)
 
-rasterizer = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
-rasterizer.test_read_write.argtypes = [ctypes.c_int,
-                                       np.ctypeslib.ndpointer(dtype=np.float32),
-                                       np.ctypeslib.ndpointer(dtype=np.int32),
-                                       np.ctypeslib.ndpointer(dtype=np.uint8)]
-# rasterizer.test_read_write.restype = np.ctypeslib.ndpointer(dtype=np.uint8)
-rasterizer.projector.argtypes = [ctypes.c_int,
-                                 np.ctypeslib.ndpointer(dtype=np.int32),
-                                 np.ctypeslib.ndpointer(dtype=np.float32),
-                                 np.ctypeslib.ndpointer(dtype=np.uint8), 
-                                 ctypes.c_float, 
-                                 ctypes.c_int]
-
 
 
 # Tested the speed between zeros() and empty(). Results were pretty similar. Thus we chose zeros for safety.
-map = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
-rasterizer.projector(len(fp_label), fp_label, fp_poly, map, MAPSIZE, GRIDSIZE)
-plt.imshow(map)
+mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
+rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
+plt.imshow(mask)
 plt.show()
 
+nFE = 4 # V, P, T, Ω
+FE = [[0.1, 0.1, 0.1, 0.7], # No observation
+      [0.7, 0.1, 0.1, 0.1], # Vehicle
+      [0.1, 0.7, 0.1, 0.1], # Pedestrian
+      [0.1, 0.1, 0.7, 0.1]] # Terrain
+FE = np.array(FE, dtype=np.float32)
+evid_map = np.zeros(shape=(GRIDSIZE, GRIDSIZE, nFE), dtype=np.float32)
+
+nFE2 = 8
+FE2 = [[0.1, 0, 0, 0, 0, 0, 0, 0.9],
+       [0.1, 0.6, 0, 0, 0.1, 0.1, 0, 0.1], 
+       [0.1, 0, 0.6, 0, 0.1, 0, 0.1, 0.1], 
+       [0.1, 0, 0, 0.6, 0, 0.1, 0.1, 0.1]]
+FE2 = np.array(FE2, dtype=np.float32)     
+evid_map2 = np.zeros(shape=(GRIDSIZE, GRIDSIZE, nFE2), dtype=np.float32)
+
+
+
+rasterizer.apply_BBA(nFE2, GRIDSIZE, FE2, mask, evid_map2)
+plt.imshow(evid_map2[:,:,1:4])
+plt.show()
+plt.imshow(evid_map2[:,:,4:7])
+plt.show()
+plt.imshow(evid_map2[:,:,7])
+plt.show()

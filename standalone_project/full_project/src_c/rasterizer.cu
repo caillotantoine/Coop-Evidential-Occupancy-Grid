@@ -29,7 +29,7 @@ extern "C" {
         {projector_cpp(len, labels, fp_vec, map, mapsize, gridsize);}
     unsigned char* test_read_write (int len, float *fp_poly, int *label, unsigned char *out)
         {return test_read_write_cpp (len, fp_poly, label, out);}
-    void apply_BBA_cpp(const int nFE, const int gridsize, float *FE, unsigned char *map, float *evid_map)
+    void apply_BBA(const int nFE, const int gridsize, float *FE, unsigned char *map, float *evid_map)
         {apply_BBA_cpp(nFE, gridsize, FE, map, evid_map, false);}
 }
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
                              {0.1, 0.7, 0.1, 0.1}, 
                              {0.1, 0.1, 0.7, 0.1}};
 
-    int i, j;
+    int i;
     for (i = 0; i<4; i++)
     {
         printf("<%3.2f; %3.2f>\n", fp_vec[0][i][0], fp_vec[0][i][1]);
