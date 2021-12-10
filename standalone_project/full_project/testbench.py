@@ -39,7 +39,7 @@ egg = EGG(mapsize=120.0, gridsize=(120*5))
 print('-------------------')
 eggout = egg.projector_resterizer(agent_out)
 fp_poly = np.array([np.array([(v.get().T)[0] for v in poly], dtype=np.float32) for (poly, _) in eggout])
-fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 0 for (_, label) in eggout], dtype=
+fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 3 if label == 'terrain' else 0 for (_, label) in eggout], dtype=
 np.int32)
 print(fp_poly)
 print(fp_label)

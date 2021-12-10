@@ -121,8 +121,14 @@ class Agent:
                 bbox = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, img)
                 # print(f"\t{bbox}")
                 bbox2.append(bbox)
+
+            # (w,h) = np.shape(img)
+            h, w,_ = img.shape
+
+            camBBox = Bbox2D(vec2(0, 0), vec2(w, h), label='terrain')
                 
             bbox2 = [box for box in bbox2 if box != None]
+            bbox2.insert(0, camBBox)
             # print(bbox2)
             
 
