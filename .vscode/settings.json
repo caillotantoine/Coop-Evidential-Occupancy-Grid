@@ -1,4 +1,10 @@
 {
     "cmake.configureOnOpen": false,
-    "cmake.sourceDirectory": "${workspaceFolder}/src"
+    "cmake.sourceDirectory": "${workspaceFolder}/src",
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
 }

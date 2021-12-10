@@ -56,30 +56,10 @@ rasterizer.projector.argtypes = [ctypes.c_int,
                                  ctypes.c_int]
 
 
-import time
-tic = time.time()
+
+# Tested the speed between zeros() and empty(). Results were pretty similar. Thus we chose zeros for safety.
 map = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
 rasterizer.projector(len(fp_label), fp_label, fp_poly, map, MAPSIZE, GRIDSIZE)
-# rasterizer.test_read_write(len(fp_label), fp_poly, fp_label, map)
-toc = time.time()
-A = toc-tic
 plt.imshow(map)
 plt.show()
-# print(toc-tic)
 
-tic = time.time()
-mapb = np.empty(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
-rasterizer.projector(len(fp_label), fp_label, fp_poly, mapb, MAPSIZE, GRIDSIZE)
-# rasterizer.test_read_write(len(fp_label), fp_poly, fp_label, map)
-toc = time.time()
-B = toc-tic
-plt.imshow(mapb)
-plt.show()
-print(A)
-print(B)
-
-
-# print(map)
-# map = np.ctypeslib.as_array(map, shape=(120*5* 120*5, ))
-
-# print(map.shape)
