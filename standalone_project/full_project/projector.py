@@ -132,14 +132,25 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     mesh_camera.transform(wTc.get())
 
     pts4 = [pt2.vec4(z=1) for pt2 in bbox.get_pts()]
-    pts_ip_c = [(invK * p) for p in pts4]
+    pts_ip_c = [((invK * p).vec3() * 120).vec4() for p in pts4]
+    pts_ip_c_ctrl = [invK * p for p in pts4]
     pts_ip_cw = [(wTc * pt4) for pt4 in pts_ip_c]
-    lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
-    out_pts = [plane.intersect(line) for line in lines]
-    for pt in out_pts:
+    pts_ip_cw_ctrl = [(wTc * pt4) for pt4 in pts_ip_c_ctrl]
+    out_pts:List[vec4] = []
+    for i, pt in enumerate(pts_ip_cw):
+        if pt.z() < pts_ip_cw_ctrl[i].z():
+            line = plkrLine(wTc.get_translation(), pts_ip_cw[i]) 
+            out_pts.append(plane.intersect(line))
+        else:
+            p = vec4(x=pt.x(), y=pt.y(), z=0)
+            out_pts.append(p)
+    # lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
+    # out_pts = [plane.intersect(line) for line in lines]
+    for i, pt in enumerate(out_pts):
         pt.normalize()
         if debug != None:
             print(pt)
+
     
     out_pts = [pt4.vec3() for pt4 in out_pts]
     out_pts = [pt3.vec2() for pt3 in out_pts]
@@ -155,9 +166,9 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
         mesh.transform(T)
 
     
-    mesh_ip_cw = [o3d.geometry.TriangleMesh.create_sphere(radius=0.1) for pt in pts_ip_cw]
+    mesh_ip_cw = [o3d.geometry.TriangleMesh.create_sphere(radius=0.3) for pt in pts_ip_cw]
     for idx, mesh in enumerate(mesh_ip_cw):
-        mesh.paint_uniform_color([0.8, 0.5, 0.1])
+        mesh.paint_uniform_color([0.1, 0.1, 1.0])
         T = np.identity(4)
         T[:3, 3] = np.transpose(pts_ip_cw[idx].get())[0,:3]
         # print(T)
@@ -167,7 +178,8 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     for idx, mesh in enumerate(mesh_out_pts):
         mesh.paint_uniform_color([0.8, 0.1, 0.1])
         T = np.identity(4)
-        T[:3, 3] = np.transpose(out_pts[idx].get())[0,:3]
+        a = np.transpose(out_pts[idx].get())
+        T[:2, 3] = a[0,:3]
         # print(T)
         mesh.transform(T)
 
@@ -227,7 +239,7 @@ if __name__ == '__main__':
 
     ground = plkrPlane()
     
-    traces = project_BBox2DOnPlane(ground, bbox, k, wTcw, vMat=vMat, vbbox3d=bbox3d)
+    traces = project_BBox2DOnPlane(ground, bbox, k, wTcw, vMat=vMat, vbbox3d=bbox3d, debug=True)
     for t in traces:
         print(t)
     
