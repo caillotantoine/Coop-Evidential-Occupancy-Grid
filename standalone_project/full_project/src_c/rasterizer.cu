@@ -171,5 +171,5 @@ void apply_BBA_cpp(const int nFE, const int gridsize, float *FE, unsigned char *
         }
     }
     // memcpy(evid_map, evidmap, sizeof(float)*gridsize*gridsize*nFE);
-    delete[] evidmap;
+    // delete[] evidmap;
 }

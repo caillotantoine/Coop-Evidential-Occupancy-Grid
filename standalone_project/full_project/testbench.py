@@ -60,7 +60,7 @@ def generate_evid_grid(agent_out):
     evid_map2 = np.zeros(shape=(GRIDSIZE, GRIDSIZE, nFE2), dtype=np.float32)
 
     rasterizer.apply_BBA(nFE2, GRIDSIZE, FE2, mask, evid_map2)
-    return evid_map2
+    return (mask, evid_map2)
 
 
 # a = agents[6]
@@ -69,19 +69,22 @@ A_TODISP = -1 #     6 -> infrastructure
 for frame in tqdm(range(10, 500)):
     data = [(agent, frame) for agent in agents]
     bboxes = pool.map(get_bbox, data)
-    evid_maps = [generate_evid_grid(d) for d in bboxes]
+    mask_eveid_maps = [generate_evid_grid(d) for d in bboxes]
+    mask, evid_maps = zip(*mask_eveid_maps)
 
     emap = evid_maps[6]
-    axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
-    axes[0, 0].set_title('Image')
-    axes[0, 1].imshow(emap[:,:,1:4])
-    axes[0, 1].set_title('V, P, T')
-    axes[1, 0].imshow(emap[:,:,4:7])
-    axes[1, 0].set_title('VP, VT, PT')
-    axes[1, 1].imshow(emap[:,:,7])
-    axes[1, 1].set_title('VPT')
-    fig.suptitle(f'Frame {frame}')
-    plt.pause(0.01)
+    # # axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
+    # # axes[0, 0].set_title('Image')
+    # axes[0, 0].imshow(mask[6])
+    # axes[0, 0].set_title('Mask')
+    # axes[0, 1].imshow(emap[:,:,1:4])
+    # axes[0, 1].set_title('V, P, T')
+    # axes[1, 0].imshow(emap[:,:,4:7])
+    # axes[1, 0].set_title('VP, VT, PT')
+    # axes[1, 1].imshow(emap[:,:,7])
+    # axes[1, 1].set_title('VPT')
+    # fig.suptitle(f'Frame {frame}')
+    # plt.pause(0.01)
 
     
     
