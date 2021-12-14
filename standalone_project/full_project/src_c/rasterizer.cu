@@ -153,8 +153,8 @@ unsigned char* test_read_write_cpp (int len, float *fp_poly, int *label, unsigne
 
 void apply_BBA_cpp(const int nFE, const int gridsize, float *FE, unsigned char *map, float *evid_map, bool CUDA)
 {
-    float *evidmap = NULL;
-    evidmap = new float[gridsize * gridsize * nFE];
+    // float *evidmap = NULL;
+    // evidmap = new float[gridsize * gridsize * nFE];
     unsigned int i = 0, j = 0;
     unsigned char cell = 0;
 
@@ -167,8 +167,9 @@ void apply_BBA_cpp(const int nFE, const int gridsize, float *FE, unsigned char *
         cell += ((map[i] & TERRAIN_MASK) == TERRAIN_MASK) * 3;
         for(j = 0; j<nFE; j++)
         {
-            *(evidmap + i*nFE + j) = *(FE + cell * nFE + j);
+            *(evid_map + i*nFE + j) = *(FE + cell * nFE + j);
         }
     }
-    memcpy(evid_map, evidmap, sizeof(float)*gridsize*gridsize*nFE);
+    // memcpy(evid_map, evidmap, sizeof(float)*gridsize*gridsize*nFE);
+    delete[] evidmap;
 }

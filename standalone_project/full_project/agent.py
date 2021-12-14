@@ -95,6 +95,12 @@ class Agent:
 
     def get_pose(self) -> TMat:
         return self.Tpose
+
+    def get_rgb(self, frame=None) -> np.ndarray:
+        if frame == None:
+            return None
+        img = cv.imread(f'{self.mypath}camera_rgb/{frame:06d}.png')
+        return img
     
 
     def get_visible_bbox(self, frame:int, plot:plt = None) -> Tuple[List[Bbox2D], TMat, TMat]:
