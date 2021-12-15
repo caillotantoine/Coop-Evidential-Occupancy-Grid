@@ -14,13 +14,14 @@ from EGG import EGG
 from ctypes import *
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
+from merger import mean_merger, mean_merger_fast
 
 import rasterizer
 
 MAPSIZE = 120.0
 GRIDSIZE = int(MAPSIZE) * 5
 
-fig, axes = plt.subplots(2, 2)
+# fig, axes = plt.subplots(2, 2)
 
 
 dataset_path:str = '/home/caillot/Documents/Dataset/CARLA_Dataset_B'
@@ -71,8 +72,12 @@ for frame in tqdm(range(10, 500)):
     bboxes = pool.map(get_bbox, data)
     mask_eveid_maps = [generate_evid_grid(d) for d in bboxes]
     mask, evid_maps = zip(*mask_eveid_maps)
+    mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
 
-    emap = evid_maps[6]
+    plt.imshow(mean_map)
+    plt.pause(0.01)
+
+    # emap = evid_maps[6]
     # # axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
     # # axes[0, 0].set_title('Image')
     # axes[0, 0].imshow(mask[6])
