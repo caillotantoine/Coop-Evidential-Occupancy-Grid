@@ -1,3 +1,5 @@
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,8 +9,24 @@
 #define PEDESTRIAN_MASK     0b10000000
 #define TERRAIN_MASK        0b00000010
 
+#define DEMPSTER            0x00
+#define CONJUNCTIVE         0x01
+#define DISJUNCTIVE         0x02
+
+#define CUDA_BLOCKWIDTH     (256)
+#define N_CLASSES           8
+
+
 void bonjour_cpp();
 void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out);
+void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
+void DST_merger_CUDA_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
+
+__host__ __device__ void conjunctive(float *inout_cell, float *cell, int n_elem, bool dempster);
+__host__ __device__ void disjunctive(float *inout_cell, float *cell, int n_elem);
+__host__ __device__ float Konflict(float *inout_cell, float *cell, int n_elem);
+
+
 void set_inter(const char *A, const char *B, char *out);
 void set_union(const char *A, const char *B, char *out);
 bool set_cmp(const char *A, const char *B);
@@ -19,7 +37,110 @@ extern "C" {
         {bonjour_cpp();}
     void mean_merger(unsigned char *masks, int gridsize, int n_agents, float *out)
         {mean_merger_cpp(masks, gridsize, n_agents, out);}
-    //     {mean_merger_cpp(masks, gridsize, out);}
+    void DST_merger(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
+        {DST_merger_CPP(evid_maps_in, inout, gridsize, nFE, n_agents, method);}
+}
+
+
+__global__ void conjunctive_kernel(float *evid_maps_in, float *inout, const int gridsize, const int nFE, const int n_agents)
+{
+    const long i = threadIdx.x + blockDim.x * blockIdx.x;
+    int j = 0;
+    if(i < (gridsize * gridsize))
+    {
+        conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, false);
+    }
+}
+
+__global__ void dempster_kernel(float *evid_maps_in, float *inout, const int gridsize, const int nFE, const int n_agents)
+{
+    const long i = threadIdx.x + blockDim.x * blockIdx.x;
+    int j = 0;
+    if(i < (gridsize * gridsize))
+    {
+        conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, true);
+    }
+}
+
+__global__ void disjunctive_kernel(float *evid_maps_in, float *inout, const int gridsize, const int nFE, const int n_agents)
+{
+    const long i = threadIdx.x + blockDim.x * blockIdx.x;
+    int j = 0;
+    if(i < (gridsize * gridsize))
+    {
+        disjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE);
+    }
+}
+
+__host__ __device__ void conjunctive(float *inout_cell, float *cell, int n_elem, bool dempster)
+{
+    int A = 0, B = 0, C = 0, i = 0;
+    float buf[N_CLASSES] = {0};
+    float res;
+    float K = 0.0;
+    if(dempster)
+        K = 1.0 / (1.0 - Konflict(inout_cell, cell, n_elem));
+    for (A = 0; A<n_elem; A++)
+    {
+        for(B=0; B<n_elem; B++)
+        {
+            for(C=0; C<n_elem; C++)
+            {
+                if((B&C) == A)
+                {
+                    res = (float) *(inout_cell + B) * (float) *(cell + C);
+                    // printf("A %f, %f, %f\n",*(inout_cell + B), *(cell + C), res);
+                    buf[A] += res;
+                }
+            }
+        }
+        buf[A] *= K;
+    }
+    for(i = 0; i<N_CLASSES; i++)
+        inout_cell[i] = buf[i];
+    // memcpy(inout_cell, buf, sizeof(float)*n_elem);
+}
+
+__host__ __device__ void disjunctive(float *inout_cell, float *cell, int n_elem)
+{
+    int A = 0, B = 0, C = 0, i=0;
+    float buf[N_CLASSES] = {0};
+    float res;
+    for (A = 0; A<n_elem; A++)
+    {
+        for(B=0; B<n_elem; B++)
+        {
+            for(C=0; C<n_elem; C++)
+            {
+                if((B|C) == A)
+                {
+                    res = (float) *(inout_cell + B) * (float) *(cell + C);
+                    // printf("A %f, %f, %f\n",*(inout_cell + B), *(cell + C), res);
+                    buf[A] += res;
+                }
+            }
+        }
+    }
+    for(i = 0; i<N_CLASSES; i++)
+        inout_cell[i] = buf[i];
+    // memcpy(inout_cell, buf, sizeof(float)*n_elem);
+}
+
+__host__ __device__ float Konflict(float *inout_cell, float *cell, int n_elem)
+{
+    int B = 0, C = 0;
+    float res = 0;
+    for(B=0; B<n_elem; B++)
+    {
+        for(C=0; C<n_elem; C++)
+        {
+            if((B|C) == 0)
+            {
+                res += (float) *(inout_cell + B) * (float) *(cell + C);
+            }
+        }
+    }
+    return res;
 }
 
 using namespace std;
@@ -39,7 +160,6 @@ int main(int argc, char **argv)
     cout << set_cmp("VP", "PVT") << endl;
 
     
-
     return 0;
 }
 
@@ -93,11 +213,11 @@ void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *ou
 {
     int l = 0, i = 0, c = 0;
     int idx = 0;
-    for(l = 0; l<n_agents; l++)
+    for(i=0; i<gridsize*gridsize; i++)
     {
-        for(i=0; i<gridsize*gridsize; i++)
+        for(l=0; l<n_agents; l++)
         {
-            switch(masks[l*(gridsize*gridsize) + i])
+            switch(masks[i*n_agents + l])
             {
                 case VEHICLE_MASK:
                     out[(i*3) + 0] += 1.0;
@@ -126,5 +246,83 @@ void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *ou
         }
     }
     for(i = 0; i<(gridsize*gridsize*3); i++)
-        out[i] /= n_agents;
+        out[i] /= n_agents; ////
 }
+
+void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
+{
+    int l = 0, i = 0, j =0;
+    for(i=0; i<gridsize*gridsize; i++)
+    {
+        for(j = 0; j<n_agents; j++)
+        {
+            //inout[i*nFE /*+ channel index*/] = evid_maps_in[i*nFE*n_agents + j*nFE /*+ channel index*/];
+            switch(method)
+            {
+                case CONJUNCTIVE:
+                    conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, false);
+                    break;
+                
+                case DISJUNCTIVE:
+                    disjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE);
+                    break;
+
+                case DEMPSTER:
+                    conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, true);
+                    break;
+
+                default:
+                    printf("No fusion method for the following value: %d", method);
+                    break;
+            }
+        }   
+    }
+
+}
+
+void DST_merger_CUDA_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
+{
+    float *dev_evid_map = NULL;
+    float *dev_inout = NULL;
+
+    const int gridwidth_d1 = 1 + (((gridsize*gridsize)-1) / CUDA_BLOCKWIDTH);
+    const dim3 gridwidth(gridwidth_d1, 1, 1);
+    const dim3 blockwidth(CUDA_BLOCKWIDTH, 1, 1);
+
+    cudaMalloc(&dev_evid_map, sizeof(float)*gridsize*gridsize*n_agents*nFE);
+    cudaMalloc(&dev_inout, sizeof(float)*gridsize*gridsize*nFE);
+
+    cudaMemcpy(dev_evid_map, evid_maps_in, sizeof(float)*gridsize*gridsize*n_agents*nFE, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_inout, inout, sizeof(float)*gridsize*gridsize*nFE, cudaMemcpyHostToDevice);
+
+
+    switch(method)
+    {
+        case CONJUNCTIVE:
+            conjunctive_kernel <<<gridwidth, blockwidth>>> (evid_maps_in, inout, gridsize, nFE, n_agents);
+            break;
+        
+        case DISJUNCTIVE:
+            disjunctive_kernel <<<gridwidth, blockwidth>>> (evid_maps_in, inout, gridsize, nFE, n_agents);
+            break;
+
+        case DEMPSTER:
+            dempster_kernel <<<gridwidth, blockwidth>>> (evid_maps_in, inout, gridsize, nFE, n_agents);
+            break;
+
+        default:
+            printf("No fusion method for the following value: %d", method);
+            break;
+    }
+
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(evid_maps_in, dev_evid_map, sizeof(float)*gridsize*gridsize*n_agents*nFE, cudaMemcpyDeviceToHost);
+    cudaMemcpy(inout, dev_inout, sizeof(float)*gridsize*gridsize*nFE, cudaMemcpyDeviceToHost);
+
+    cudaFree(dev_evid_map);
+    cudaFree(dev_inout);
+}
+
+
+
