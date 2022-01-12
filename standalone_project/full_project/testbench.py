@@ -15,6 +15,7 @@ from ctypes import *
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from merger import mean_merger, mean_merger_fast, DST_merger
+from decision import cred2pign
 
 import rasterizer
 
@@ -28,7 +29,11 @@ GRIDSIZE = int(MAPSIZE) * 5
 #     [0.1, 0, 0.6, 0, 0.1, 0, 0.1, 0.1], 
 #     [0.1, 0, 0, 0.6, 0, 0.1, 0.1, 0.1]]
 
-fig, axes = plt.subplots(2, 2)
+fig, axes = plt.subplots(2, 3)
+SAVE_PATH = '/home/caillot/Documents/output_algo/'
+CPT_MEAN = False
+ALGO = 'Conjonctive'
+ALGOID = 1
 
 
 def get_bbox(data):
@@ -85,8 +90,22 @@ for frame in tqdm(range(10, 500)):
     bboxes = pool.map(get_bbox, data)
     mask_eveid_maps = [generate_evid_grid(d) for d in bboxes]
     mask, evid_maps = zip(*mask_eveid_maps)
-    mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
-    evid_out = DST_merger(evid_maps=list(evid_maps), gridsize=GRIDSIZE)
+
+    if CPT_MEAN:
+        mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
+        sem_map_mean = cred2pign(mean_map, method=-1)
+        plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
+        plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
+
+
+    evid_out = DST_merger(evid_maps=list(evid_maps), gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+    plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-v-p-t.png', evid_out[:,:,[1, 2, 4]])
+    plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
+    plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
+    for m in range(3):
+        sem_map = cred2pign(evid_out, method=m)
+        plt.imsave(f'{SAVE_PATH}/{ALGO}/{m}/{frame:06d}.png', sem_map)
+
 
     # plt.imshow(mean_map)
     # plt.pause(0.01)
@@ -94,13 +113,20 @@ for frame in tqdm(range(10, 500)):
     # emap = evid_maps[6]
     # axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
     # axes[0, 0].set_title('Image')
-    axes[0, 0].imshow(mean_map)
-    axes[0, 0].set_title('Mask')
-    axes[0, 1].imshow(evid_out[:,:,1:4])
-    axes[0, 1].set_title('V, P, T')
-    axes[1, 0].imshow(evid_out[:,:,4:7])
-    axes[1, 0].set_title('VP, VT, PT')
-    axes[1, 1].imshow(evid_out[:,:,7])
-    axes[1, 1].set_title('VPT')
-    fig.suptitle(f'Frame {frame}')
-    plt.pause(0.01)
+
+    # axes[0, 0].imshow(mean_map)
+    # axes[0, 0].set_title('Mask')
+    # axes[0, 1].imshow(evid_out[:,:,[1, 2, 4]])
+    # axes[0, 1].set_title('V, P, T')
+    # axes[0, 2].imshow(evid_out[:,:,[3, 5, 6]])
+    # axes[0, 2].set_title('VP, VT, PT')
+    # axes[1, 1].imshow(evid_out[:,:,7])
+    # axes[1, 1].set_title('VPT')
+    # # axes[1, 0].imshow(evid_out[:,:,4:7])
+    # # axes[1, 0].set_title('VP, VT, PT')
+    # axes[1, 2].imshow(sem_map)
+    # axes[1, 2].set_title('sem_map evid')
+    # # axes[1, 0].imshow(sem_map_mean)
+    # # axes[1, 0].set_title('sem_map mean')
+    # fig.suptitle(f'Frame {frame}')
+    # plt.pause(0.01)

@@ -4,6 +4,7 @@ LIBS = -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lopencv_bioinspired -l
 
 target_1=rasterizer
 target_2=merger
+target_3=decision
 
 # gcc -shared -Wl,-soname,PixAvg -o PixAvg.so -fPIC fastAverage.c
 # --compiler-options '-fPIC'
@@ -13,7 +14,7 @@ target_2=merger
 #https://www.geeksforgeeks.org/how-to-call-c-c-from-python/
 
 
-all: $(target_1).so $(target_1) $(target_2) $(target_2).so
+all: $(target_1).so $(target_1) $(target_2) $(target_2).so $(target_3) $(target_3).so
 
 $(target_1): $(target_1).o 
 	$(CXX) -o $@ $(CFLAGS) $(LIBS) $?
@@ -33,6 +34,16 @@ $(target_2).so: $(target_2).o
 	nm -gD $@ | grep ' T ' | grep -v '_Z'
 
 $(target_2).o: $(target_2).cu
+	$(CXX) -std=c++11 -c -g --compiler-options '-fPIC' $(CFLAGS) $(LIBS) $?
+
+$(target_3): $(target_3).o 
+	$(CXX) -o $@ $(CFLAGS) $(LIBS) $?
+
+$(target_3).so: $(target_3).o
+	$(CXX) --compiler-options '-fPIC' -shared $(CFLAGS) $(LIBS) $? -o $@ 
+	nm -gD $@ | grep ' T ' | grep -v '_Z'
+
+$(target_3).o: $(target_3).cu
 	$(CXX) -std=c++11 -c -g --compiler-options '-fPIC' $(CFLAGS) $(LIBS) $?
 
 clean:

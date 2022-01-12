@@ -38,14 +38,21 @@ merger.DST_merger.argtypes = [np.ctypeslib.ndpointer(dtype=np.float32), np.ctype
 def DST_merger_w( evid_maps_in:np.ctypeslib.ndpointer(dtype=np.float32),  inout:np.ctypeslib.ndpointer(dtype=np.float32), gridsize:c_int, nFE:c_int, n_agents:c_int, method:c_char):
 	merger.DST_merger( evid_maps_in,  inout, gridsize, nFE, n_agents, method)
 
-def DST_merger(evid_maps:List[np.ndarray], gridsize) -> np.ndarray:
+merger.DST_merger_CUDA.argtypes = [np.ctypeslib.ndpointer(dtype=np.float32), np.ctypeslib.ndpointer(dtype=np.float32), c_int, c_int, c_int, c_char] 
+def DST_merger_CUDA_w( evid_maps_in:np.ctypeslib.ndpointer(dtype=np.float32),  inout:np.ctypeslib.ndpointer(dtype=np.float32), gridsize:c_int, nFE:c_int, n_agents:c_int, method:c_char):
+	merger.DST_merger_CUDA( evid_maps_in,  inout, gridsize, nFE, n_agents, method)
+
+def DST_merger(evid_maps:List[np.ndarray], gridsize, CUDA:bool = False, method:int = 0) -> np.ndarray:
     # evid_maps_l = evid_maps
     inout = deepcopy(evid_maps.pop(0))
-    evid_maps_arr = np.stack(evid_maps, axis = 2)
-    evid_maps_arr = evid_maps_arr
+    evid_maps_arr = np.stack(evid_maps, axis = 2) # [gridsize][gridsize][n_agents][n_elements]
+    # evid_maps_arr = evid_maps_arr
     nFE = evid_maps_arr.shape[3]
     # inout = np.zeros(shape=(gridsize, gridsize, nFE), dtype=np.float32)
-    DST_merger_w(evid_maps_in=evid_maps_arr, inout=inout, gridsize=gridsize, nFE=nFE, n_agents=len(evid_maps), method=c_char(0))
+    if CUDA:
+        DST_merger_CUDA_w(evid_maps_in=evid_maps_arr, inout=inout, gridsize=gridsize, nFE=nFE, n_agents=len(evid_maps), method=c_char(method))
+    else:
+        DST_merger_w(evid_maps_in=evid_maps_arr, inout=inout, gridsize=gridsize, nFE=nFE, n_agents=len(evid_maps), method=c_char(method))
     return inout
     
 

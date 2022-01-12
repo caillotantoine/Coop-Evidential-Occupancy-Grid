@@ -16,22 +16,23 @@
 #define CUDA_BLOCKWIDTH     (256)
 #define N_CLASSES           8
 
-
+// CPP function to be available on library front end
 void bonjour_cpp();
 void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out);
 void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
 void DST_merger_CUDA_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
 
+// Merging functions, either for CUDA and CPP
 __host__ __device__ void conjunctive(float *inout_cell, float *cell, int n_elem, bool dempster);
 __host__ __device__ void disjunctive(float *inout_cell, float *cell, int n_elem);
 __host__ __device__ float Konflict(float *inout_cell, float *cell, int n_elem);
 
-
+// Obsolete function? 
 void set_inter(const char *A, const char *B, char *out);
 void set_union(const char *A, const char *B, char *out);
 bool set_cmp(const char *A, const char *B);
 
-
+// Interface of the SO library
 extern "C" {
     void bonjour()
         {bonjour_cpp();}
@@ -39,8 +40,18 @@ extern "C" {
         {mean_merger_cpp(masks, gridsize, n_agents, out);}
     void DST_merger(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
         {DST_merger_CPP(evid_maps_in, inout, gridsize, nFE, n_agents, method);}
+    void DST_merger_CUDA(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
+        {DST_merger_CUDA_CPP(evid_maps_in, inout, gridsize, nFE, n_agents, method);}
 }
 
+//////////////////////////
+//                      //
+//     CUDA kernels     //
+//                      //
+//////////////////////////
+
+// TODO : Doesn't work. Seem to only process the first agent, thus, no merging done. 
+//   NOTE : I certainly messed up with memory management in somewhere.
 
 __global__ void conjunctive_kernel(float *evid_maps_in, float *inout, const int gridsize, const int nFE, const int n_agents)
 {
@@ -48,7 +59,10 @@ __global__ void conjunctive_kernel(float *evid_maps_in, float *inout, const int 
     int j = 0;
     if(i < (gridsize * gridsize))
     {
-        conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, false);
+        for(j = 0; j < n_agents; j++)
+        {
+            conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, false);
+        }
     }
 }
 
@@ -58,7 +72,8 @@ __global__ void dempster_kernel(float *evid_maps_in, float *inout, const int gri
     int j = 0;
     if(i < (gridsize * gridsize))
     {
-        conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, true);
+        for(j = 0; j < n_agents; j++)
+            conjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE, true);
     }
 }
 
@@ -68,9 +83,17 @@ __global__ void disjunctive_kernel(float *evid_maps_in, float *inout, const int 
     int j = 0;
     if(i < (gridsize * gridsize))
     {
-        disjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE);
+        for(j = 0; j < n_agents; j++)
+            disjunctive((inout + i*nFE), (evid_maps_in + i*nFE*n_agents + j*nFE), nFE);
     }
 }
+
+
+///////////////////////////
+//                       //
+//   Merging functions   //
+//                       //
+///////////////////////////
 
 __host__ __device__ void conjunctive(float *inout_cell, float *cell, int n_elem, bool dempster)
 {
@@ -94,7 +117,8 @@ __host__ __device__ void conjunctive(float *inout_cell, float *cell, int n_elem,
                 }
             }
         }
-        buf[A] *= K;
+        if(dempster)
+            buf[A] *= K;
     }
     for(i = 0; i<N_CLASSES; i++)
         inout_cell[i] = buf[i];
@@ -143,6 +167,13 @@ __host__ __device__ float Konflict(float *inout_cell, float *cell, int n_elem)
     return res;
 }
 
+
+/////////////////////////
+//                     //
+//     Entry point     //
+//                     //
+/////////////////////////
+
 using namespace std;
 
 int main(int argc, char **argv)
@@ -163,11 +194,19 @@ int main(int argc, char **argv)
     return 0;
 }
 
+//////////////////////////
+//                      //
+//       Functions      //
+//                      //
+//////////////////////////
+
+// Test - obsolete
 void bonjour_cpp()
 {
     printf("Bonjour!!!\n");
 }
 
+// Obsolete
 void set_inter(const char *A, const char *B, char *out)
 {
     int i = 0, j = 0;
@@ -181,6 +220,7 @@ void set_inter(const char *A, const char *B, char *out)
     }   
 }
 
+// Obsolete
 void set_union(const char *A, const char *B, char *out)
 {
     int i = 0, j = strlen(B);
@@ -195,6 +235,7 @@ void set_union(const char *A, const char *B, char *out)
     }   
 }
 
+// Obsolete
 bool set_cmp(const char *A, const char *B)
 {
     int i = 0;
@@ -208,6 +249,8 @@ bool set_cmp(const char *A, const char *B)
     }
     return true;
 }
+
+// Merger code for averaging cells
 
 void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out)
 {
@@ -249,6 +292,8 @@ void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *ou
         out[i] /= n_agents; ////
 }
 
+// Merger function to merge the cells using Dempster Shaffer Theory 
+
 void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
 {
     int l = 0, i = 0, j =0;
@@ -279,6 +324,8 @@ void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, in
     }
 
 }
+
+// Merger function to merge the cells using Dempster Shaffer Theory with CUDA
 
 void DST_merger_CUDA_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
 {
