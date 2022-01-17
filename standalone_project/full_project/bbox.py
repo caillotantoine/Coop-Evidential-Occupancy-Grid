@@ -9,6 +9,7 @@ class Bbox:
         self.size = size
         self.label = label
         self.rotation = rotation
+        self.TPose = None
 
     def __str__(self) -> str:
         return f'BBox {self.label} of a size {self.size} @ {self.pose}'
@@ -33,6 +34,12 @@ class Bbox:
 
     def set_rotation(self, rotation):
         self.rotation = rotation
+
+    def set_TPose(self, TPose):
+        self.TPose = TPose
+
+    def get_TPose(self):
+        return self.TPose
 
 class Bbox3D(Bbox):
     def __init__(self, pose:vec3, size:vec3, label:str) -> None:

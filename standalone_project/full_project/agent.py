@@ -79,6 +79,9 @@ class Agent:
                 bboxsize = vec3(sx*2.0, sy*2.0, sz*2.0)
                 bbox_pose = vec3(ox, oy, oz)
                 self.bbox3d = Bbox3D(bbox_pose, bboxsize, self.label)
+                self.bbox3d.set_TPose(self.Tpose.get())
+
+        return self
 
         # DEBUG
         #
@@ -101,7 +104,37 @@ class Agent:
             return None
         img = cv.imread(f'{self.mypath}camera_rgb/{frame:06d}.png')
         return img
-    
+
+    def get_pred(self, frame:int) -> List[Bbox3D]:
+        self.get_state(frame)
+        if self.label == "pedestrian":
+            raise Exception("Pedestrian do not have sensors.")
+        pred_path = f"{self.mypath}/Prediction/{frame:06d}.json"
+        # print(pred_path)
+        with open(pred_path) as json_file:
+            jsonData = json.load(json_file)
+            # print(jsonData)
+            cnt = 0
+            boxes:List[Bbox3D] = []
+            while True:
+                try: 
+                    dim = np.array(jsonData[f"{cnt}"]["dimensions (whl)"], dtype=float)
+                    label = "vehicle" if jsonData[f"{cnt}"]["class"] == "car" else jsonData[f"{cnt}"]["class"]
+                    Tpose = np.array(jsonData[f"{cnt}"]["K_obj2world"], dtype=float)
+                    cnt += 1
+
+                    bbox = Bbox3D(vec3(Tpose[0][3], Tpose[1][3], Tpose[2][3]), vec3(dim[0], dim[1], dim[2]), label=label)
+                    bbox.set_TPose(Tpose)
+                    boxes.append(bbox)
+                    # print(dim)
+                    # print(label)
+                    # print(Tpose)
+                except Exception as e:
+                    break
+            return boxes
+        return None
+
+
 
     def get_visible_bbox(self, frame:int, plot:plt = None) -> Tuple[List[Bbox2D], TMat, TMat]:
         self.get_state(frame)
@@ -162,7 +195,8 @@ if __name__ == "__main__":
     print(v0)
     # v0.get_state(56)
     for i in tqdm(range(1, 100)):
-        v0.get_visible_bbox(i)
+        # v0.get_visible_bbox(i)
+        print(v0.get_pred(i))
         
     
     # cv.waitKey(0)
