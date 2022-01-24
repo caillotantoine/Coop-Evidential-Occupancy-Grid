@@ -12,6 +12,7 @@
 #define DEMPSTER            0x00
 #define CONJUNCTIVE         0x01
 #define DISJUNCTIVE         0x02
+#define MAXBBA              0x03
 
 #define VEHICLE_ELEM_ID     0b001
 #define PEDESTRIAN_ELEM_ID  0b010
@@ -80,6 +81,7 @@ void decision_CPP(float *evid_map_in, unsigned char *sem_map, int gridsize, int 
     float val = 0;
     float maxprev = -1.0;
     const unsigned char LUT[3] = {VEHICLE_MASK, PEDESTRIAN_MASK, TERRAIN_MASK};
+
     // printf("1 : %x\n", LUT[0]);
     // printf("2 : %x\n", LUT[1]);
     // printf("3 : %x\n", LUT[2]);
@@ -106,6 +108,10 @@ void decision_CPP(float *evid_map_in, unsigned char *sem_map, int gridsize, int 
 
                 case 2:
                     val = pl((evid_map_in + i * nFE), VEHICLE_ELEM_ID<<j, nFE);
+                    break;
+
+                case MAXBBA:
+                    val = evid_map_in[(i * nFE) + (VEHICLE_ELEM_ID<<j)];
                     break;
 
                 default:

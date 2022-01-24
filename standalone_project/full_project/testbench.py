@@ -39,7 +39,7 @@ CPT_MEAN = True
 ALGO = 'Dempster'
 ALGOID = 0
 
-ANTOINE_M = True
+ANTOINE_M = False
 
 
 def get_bbox(data):
@@ -50,7 +50,7 @@ def get_pred(data):
     agent, frame = data
     return agent.get_pred(frame=frame)
 
-def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat] = None, agent_3D:List[Bbox3D] = None):
+def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat] = None, agent_3D:List[Bbox3D] = None, antoine=False):
     # agent, frame = data
     # agent_out = agent.get_visible_bbox(frame=frame)
 
@@ -64,14 +64,19 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat] = None, agent_3
         np.int32)
         rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
     elif agent_3D != None:
-        mask[:,:] = int('0b00000010', 2)
+        if antoine == False:
+            mask[:,:] = int('0b00000010', 2)
         for agent in agent_3D:
-            # print(f'{agent.myid} of a size of {agent.get_bbox3d()} at {agent.get_pose()}')
-            # bin_mask = [np.array([1.0, 1.0, 0.0, 1.0]), np.array([1.0, -1.0, 0.0, 1.0]), np.array([-1.0, -1.0, 0.0, 1.0]), np.array([-1.0, 1.0, 0.0, 1.0])]
-            bin_mask = [np.array([0.5, 0.5, 0.0, 1.0]), np.array([0.5, -0.5, 0.0, 1.0]), np.array([-0.5, -0.5, 0.0, 1.0]), np.array([-0.5, 0.5, 0.0, 1.0])]
             bboxsize = agent.get_size()
             label = agent.get_label()
             poseT = agent.get_TPose()
+            # print(f'{agent.myid} of a size of {agent.get_bbox3d()} at {agent.get_pose()}')
+            # bin_mask = [np.array([1.0, 1.0, 0.0, 1.0]), np.array([1.0, -1.0, 0.0, 1.0]), np.array([-1.0, -1.0, 0.0, 1.0]), np.array([-1.0, 1.0, 0.0, 1.0])]
+            if antoine:
+                bin_mask = [np.array([0.5, -0.5, 0.5, 1.0]), np.array([0.5, -0.5, -0.5, 1.0]), np.array([-0.5, -0.5, -0.5, 1.0]), np.array([-0.5, -0.5, 0.5, 1.0])]
+            else:
+                bin_mask = [np.array([0.5, 0.5, 0.0, 1.0]), np.array([0.5, -0.5, 0.0, 1.0]), np.array([-0.5, -0.5, 0.0, 1.0]), np.array([-0.5, 0.5, 0.0, 1.0])]
+            
             # print(f'{label} of size {bboxsize} at:\n{poseT}')
             centered_fps = [(bboxsize.vec4().get().T * m).T for m in bin_mask]
             # print(centered_fps[0].shape)
@@ -79,7 +84,10 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat] = None, agent_3
             # print(poseT)
             fps = [poseT @ v for v in centered_fps]
             # print(fps)
-            fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps])
+            if antoine:
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps])
+            else:
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps])
             # print(fps_pix)
             cv.fillPoly(mask, pts=[fps_pix], color=(int('0b01000000', 2) if label == 'vehicle' else int('0b10000000', 2)))
     else: 
@@ -124,8 +132,8 @@ for frame in tqdm(range(10, 500)):
     if ANTOINE_M:
         # bboxes = pool.map(get_pred, data)
         bboxes = [a.get_pred(frame) for a in agents]
-        print(bboxes)
-        mask_eveid_maps = [generate_evid_grid(agent_3D=d) for d in bboxes]
+        # print(bboxes)
+        mask_eveid_maps = [generate_evid_grid(agent_3D=d, antoine=True) for d in bboxes]
     else:
         bboxes = pool.map(get_bbox, data)
         mask_eveid_maps = [generate_evid_grid(agent_out=d) for d in bboxes]
@@ -148,7 +156,7 @@ for frame in tqdm(range(10, 500)):
     # plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
     # plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
     for m in range(3):
-        sem_map = cred2pign(evid_out, method=m)
+        sem_map = cred2pign(evid_out, method=3)
         plt.imsave(f'{SAVE_PATH}/{ALGO}/{m}/{frame:06d}.png', sem_map)
 
 
@@ -159,7 +167,7 @@ for frame in tqdm(range(10, 500)):
     # axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
     # axes[0, 0].set_title('Image')
 
-    axes[0, 0].imshow(mask[0])
+    axes[0, 0].imshow(np.array(mask)[[6, 7, 8]].transpose(1, 2, 0))
     axes[0, 0].set_title('Mask')
     axes[0, 1].imshow(evid_out[:,:,[1, 2, 4]])
     axes[0, 1].set_title('V, P, T')

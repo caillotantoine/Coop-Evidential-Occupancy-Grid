@@ -110,6 +110,7 @@ class Agent:
         if self.label == "pedestrian":
             raise Exception("Pedestrian do not have sensors.")
         pred_path = f"{self.mypath}/Prediction/{frame:06d}.json"
+        print(self.mypath)
         # print(pred_path)
         with open(pred_path) as json_file:
             jsonData = json.load(json_file)
