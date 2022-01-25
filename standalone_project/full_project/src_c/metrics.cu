@@ -9,9 +9,9 @@ int FP(unsigned char truth, unsigned char test, unsigned char label);
 int FN(unsigned char truth, unsigned char test, unsigned char label);
 
 extern "C" {
-    void TFPN(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label)
+    int TFPN(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label)
     {
-        TFPN_CPP(truth, test, gridsize, TFPN_sel, label);
+        return TFPN_CPP(truth, test, gridsize, TFPN_sel, label);
     }
     void toOccup(unsigned char *sem_map, unsigned char *out, int gridsize)
     {

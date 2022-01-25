@@ -18,6 +18,9 @@ from multiprocessing import Pool
 from merger import mean_merger, mean_merger_fast, DST_merger
 from decision import cred2pign
 import cv2 as cv
+from metrics import TFPN, toOccup
+import csv
+import sys
 
 import rasterizer
 
@@ -25,8 +28,10 @@ MAPSIZE = 120.0
 STEPGRID = 5
 GRIDSIZE = int(MAPSIZE) * STEPGRID
 
-
-
+FUS_LUT = {'Dempster': 0, 'Conjunctive': 1, 'Disjunctive': 2}
+LABEL_LUT = {'Vehicle': int('0b01000000', 2), 'Pedestrian': int('0b10000000', 2), 'Terrain': int('0b00000010', 2)}
+DECIS_LUT = {'Avg_Max': -1, 'BetP': 0, 'Bel': 1, 'Pl': 2, 'BBA': 3}
+TFPN_LUT = {'TP': 0, 'TN': 1, 'FP': 2, 'FN': 3}
 
 # FE = [[0.1, 0, 0, 0, 0, 0, 0, 0.9],
 #     [0.1, 0.6, 0, 0, 0.1, 0.1, 0, 0.1], 
@@ -36,8 +41,11 @@ GRIDSIZE = int(MAPSIZE) * STEPGRID
 fig, axes = plt.subplots(2, 3)
 SAVE_PATH = '/home/caillot/Documents/output_algo/'
 CPT_MEAN = True
-ALGO = 'Dempster'
-ALGOID = 0
+try:
+    ALGO = sys.argv[1]
+except:
+    ALGO = 'Dempster'
+ALGOID = FUS_LUT[ALGO]
 
 ANTOINE_M = False
 
@@ -108,6 +116,19 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat] = None, agent_3
     return (mask, evid_map)
 
 
+def record(sem_gnd:np.ndarray, sem_test:np.ndarray, gridsize:int, frame:int):
+    occ_gnd = toOccup(sem_gnd, gridsize)
+    occ_test = toOccup(sem_test, gridsize)
+
+    outs = {'frame': frame}
+    for key in TFPN_LUT:
+        outs[f'occup_{key}'] = TFPN(occ_gnd, occ_test, gridsize, TFPN_LUT[key], 0)
+
+    for keylab in LABEL_LUT:
+        for key_tfpn in TFPN_LUT:
+            outs[f'{keylab}_{key_tfpn}'] = TFPN(sem_gnd, sem_test, gridsize, TFPN_LUT[key_tfpn], LABEL_LUT[keylab])
+
+    return outs
 
 
 
@@ -119,10 +140,34 @@ with open(f"{dataset_path}//information.json") as json_file:
     agents = [Agent(dataset_path=dataset_path, id=idx) for idx, agent in enumerate(agent_l) if agent['type'] != "pedestrian"]
     agents2gndtruth = [Agent(dataset_path=dataset_path, id=idx) for idx, agent in enumerate(agent_l) if agent['type'] != "infrastructure"]
 
+agents = [agents[i] for i in [1, 6, 7, 8, 9, 10, 11]]
 for idx, agent in enumerate(agents):
     print(f"{idx} : \t{agent}")
     
 
+fieldsname = ['frame']
+
+for key in TFPN_LUT:
+    fieldsname.append(f'occup_{key}')
+
+for keylab in LABEL_LUT:
+    for key_tfpn in TFPN_LUT:
+        fieldsname.append(f'{keylab}_{key_tfpn}')
+
+print(fieldsname)
+
+recfile = open(f'{SAVE_PATH}/avg.csv', mode='w')
+writer = csv.DictWriter(recfile, fieldnames=fieldsname)
+writer.writeheader()
+recfile.close()
+
+for decision_maker in DECIS_LUT:
+    if decision_maker == 'Avg_Max':
+        continue
+    recfile = open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='w')
+    writer = csv.DictWriter(recfile, fieldnames=fieldsname)
+    writer.writeheader()
+    recfile.close()
 
 # a = agents[6]
 pool = Pool(multiprocessing.cpu_count())
@@ -147,6 +192,12 @@ for frame in tqdm(range(10, 500)):
     if CPT_MEAN:
         mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
         sem_map_mean = cred2pign(mean_map, method=-1)
+        with open(f'{SAVE_PATH}/avg.csv', mode='a') as recfile:
+            writer = csv.DictWriter(recfile, fieldnames=fieldsname)
+            writer.writerow(record(mask_GND, sem_map_mean, GRIDSIZE, frame))
+            recfile.close()
+
+        # maprec = record(mask_GND, sem_map_mean, GRIDSIZE, frame)
         # plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
         # plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
 
@@ -155,9 +206,21 @@ for frame in tqdm(range(10, 500)):
     # plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-v-p-t.png', evid_out[:,:,[1, 2, 4]])
     # plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
     # plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
-    for m in range(3):
-        sem_map = cred2pign(evid_out, method=3)
-        plt.imsave(f'{SAVE_PATH}/{ALGO}/{m}/{frame:06d}.png', sem_map)
+    LUT_Cred2Pign = ['BetP', 'Bel', 'Pl', 'BBA']
+
+
+    for decision_maker in DECIS_LUT:
+        if decision_maker == 'Avg_Max':
+            continue
+
+        sem_map = cred2pign(evid_out, method=DECIS_LUT[decision_maker])
+        with open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='a') as recfile:
+            writer = csv.DictWriter(recfile, fieldnames=fieldsname)
+            writer.writerow(record(mask_GND, sem_map, GRIDSIZE, frame))
+            recfile.close()
+
+
+        # plt.imsave(f'{SAVE_PATH}/{ALGO}/{m}/{frame:06d}.png', sem_map)
 
 
     # plt.imshow(mean_map)
@@ -167,21 +230,21 @@ for frame in tqdm(range(10, 500)):
     # axes[0, 0].imshow(agents[6].get_rgb(frame=frame))
     # axes[0, 0].set_title('Image')
 
-    axes[0, 0].imshow(np.array(mask)[[6, 7, 8]].transpose(1, 2, 0))
-    axes[0, 0].set_title('Mask')
-    axes[0, 1].imshow(evid_out[:,:,[1, 2, 4]])
-    axes[0, 1].set_title('V, P, T')
-    axes[0, 2].imshow(evid_out[:,:,[3, 5, 6]])
-    axes[0, 2].set_title('VP, VT, PT')
-    axes[1, 1].imshow(sem_map_mean)
-    axes[1, 1].set_title('Sem map mean')
-    axes[1, 0].imshow(mask_GND)
-    axes[1, 0].set_title('Ground truth')
-    # axes[1, 0].imshow(evid_out[:,:,4:7])
-    # axes[1, 0].set_title('VP, VT, PT')
-    axes[1, 2].imshow(sem_map)
-    axes[1, 2].set_title('sem_map evid')
-    # axes[1, 0].imshow(sem_map_mean)
-    # axes[1, 0].set_title('sem_map mean')
-    fig.suptitle(f'Frame {frame}')
-    plt.pause(0.01)
+    # axes[0, 0].imshow(np.array(mask)[[0, 1, 2]].transpose(1, 2, 0))
+    # axes[0, 0].set_title('Mask')
+    # axes[0, 1].imshow(evid_out[:,:,[1, 2, 4]])
+    # axes[0, 1].set_title('V, P, T')
+    # axes[0, 2].imshow(evid_out[:,:,[3, 5, 6]])
+    # axes[0, 2].set_title('VP, VT, PT')
+    # axes[1, 1].imshow(sem_map_mean)
+    # axes[1, 1].set_title('Sem map mean')
+    # axes[1, 0].imshow(mask_GND)
+    # axes[1, 0].set_title('Ground truth')
+    # # axes[1, 0].imshow(evid_out[:,:,4:7])
+    # # axes[1, 0].set_title('VP, VT, PT')
+    # axes[1, 2].imshow(toOccup(sem_map, GRIDSIZE))
+    # axes[1, 2].set_title('sem_map evid')
+    # # axes[1, 0].imshow(sem_map_mean)
+    # # axes[1, 0].set_title('sem_map mean')
+    # fig.suptitle(f'Frame {frame}')
+    # plt.pause(0.01)
