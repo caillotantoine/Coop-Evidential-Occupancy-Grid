@@ -186,7 +186,7 @@ class Agent:
                 plot.draw()
                 plt.pause(0.001)
 
-            return (bbox2, k_mat, camPose)
+            return (bbox2, k_mat, camPose, self.label)
                 
 
 
