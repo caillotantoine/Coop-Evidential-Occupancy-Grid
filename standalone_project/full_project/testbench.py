@@ -199,6 +199,7 @@ with open(args.json_path) as json_file:
     if idx2read != None:
         agents = [agents[i] for i in idx2read]
 
+
 for idx, agent in enumerate(agents):
     print(f"{idx} : \t{agent}")
     
@@ -278,8 +279,8 @@ for frame in tqdm(range(args.start, args.end)):
             recfile.close()
 
         if args.save_img:
-            if not path.isdir(f'{SAVE_PATH}/{ALGO}/RAW/'):
-                makedirs(f'{SAVE_PATH}/{ALGO}/RAW/')
+            if not path.isdir(f'{SAVE_PATH}/{ALGO}/{decision_maker}/'):
+                makedirs(f'{SAVE_PATH}/{ALGO}/{decision_maker}/')
             plt.imsave(f'{SAVE_PATH}/{ALGO}/{decision_maker}/{frame:06d}.png', sem_map)
 
 
