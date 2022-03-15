@@ -110,61 +110,57 @@ def get_pred(data):
     return agent.get_pred(frame=frame)
 
 def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, agent_3D:List[Bbox3D] = None, antoine=False):
-    egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE))
-    mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8)
+
+    egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE)) # create an Evidential Grid Generator
+    mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8) # empty mask map
 
     if agent_out != None:
+        # Extract 2D bounding boxes and the label from the dataset
         eggout = egg.projector_resterizer(agent_out, confjsonpath=args.json_path)
+
+        # Extract the bounding boxes 
         fp_poly = np.array([np.array([(v.get().T)[0] for v in poly], dtype=np.float32) for (poly, _) in eggout])
+
+        # Extract the labels
         fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 3 if label == 'terrain' else 0 for (_, label) in eggout], dtype=
         np.int32)
-        rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
-    elif agent_3D != None:
-        if antoine == False:
-            mask[:,:] = int('0b00000010', 2)
-        for agent in agent_3D:
-            bboxsize = agent.get_size()
-            label = agent.get_label()
-            poseT = agent.get_TPose()
-            # print(f'{agent.myid} of a size of {agent.get_bbox3d()} at {agent.get_pose()}')
-            # bin_mask = [np.array([1.0, 1.0, 0.0, 1.0]), np.array([1.0, -1.0, 0.0, 1.0]), np.array([-1.0, -1.0, 0.0, 1.0]), np.array([-1.0, 1.0, 0.0, 1.0])]
-            if antoine:
-                bin_mask = [np.array([0.5, -0.5, 0.5, 1.0]), np.array([0.5, -0.5, -0.5, 1.0]), np.array([-0.5, -0.5, -0.5, 1.0]), np.array([-0.5, -0.5, 0.5, 1.0])]
-            else:
-                bin_mask = [np.array([0.5, 0.5, 0.0, 1.0]), np.array([0.5, -0.5, 0.0, 1.0]), np.array([-0.5, -0.5, 0.0, 1.0]), np.array([-0.5, 0.5, 0.0, 1.0])]
-            
-            # print(f'{label} of size {bboxsize} at:\n{poseT}')
-            centered_fps = [(bboxsize.vec4().get().T * m).T for m in bin_mask]
-            # print(centered_fps[0].shape)
 
-            # print(poseT)
-            fps = [poseT @ v for v in centered_fps]
-            # print(fps)
-            if antoine:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps])
-            else:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps])
-            # print(fps_pix)
-            cv.fillPoly(mask, pts=[fps_pix], color=(int('0b01000000', 2) if label == 'vehicle' else int('0b10000000', 2)))
+        # Project the 2D bounding boxes and create a mask
+        rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
+
+
+    elif agent_3D != None:
+        # TO DO : Treating 3D bounding box
+        pass
+
     else: 
         raise NameError("Both agent_out and agent_3D are set to None. Assign a value to at least one of them.")
         
+    # define the number of focal elements
     nFE = 8
+    # grab the focal elements from a json file
     with open(args.json_path) as json_file:
         data = json.load(json_file)
         FE = data['FE_mat']
         json_file.close()
 
+    # example of focal elements
     # #      Ø    V    P    VP   T    VT   PT   VPT
     # FE = [[0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.9], # VPT
     #     [0.1, 0.6, 0.0, 0.1, 0.0, 0.1, 0.0, 0.1], # V
     #     [0.1, 0.0, 0.6, 0.1, 0.0, 0.0, 0.1, 0.1], # P
     #     [0.1, 0.0, 0.0, 0.0, 0.6, 0.1, 0.1, 0.1]] # T
 
-    FE = np.array(FE, dtype=np.float32)     
+    # convert the focal element list as nparray
+    FE = np.array(FE, dtype=np.float32)  
+
+    # create an empty evidential map with the right size   
     evid_map = np.zeros(shape=(GRIDSIZE, GRIDSIZE, nFE), dtype=np.float32)
 
+    # from the masks, create evidential maps
     rasterizer.apply_BBA(nFE, GRIDSIZE, FE, mask, evid_map)
+
+    # return the masks (for averaging method) and the evidential maps
     return (mask, evid_map)
 
 
