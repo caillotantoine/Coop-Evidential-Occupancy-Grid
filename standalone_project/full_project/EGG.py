@@ -28,6 +28,7 @@ class EGG:
 
         newT = camT
 
+        # Add noise of position
         if confjsonpath != None:
             with open(confjsonpath) as json_file:
                 data = json.load(json_file)
@@ -45,22 +46,30 @@ class EGG:
         # print(newT)
 
         for bbox in bbox_list:
-            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT)
-            coords.append(np.array([(v.get().T)[0] for v in fp]))
-            labels.append(bbox.label)
+            # project a bbox as a footprint
+            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT) 
+
+            # get the footprint vertex on the map
+            # useless? 
+            #coords.append(np.array([(v.get().T)[0] for v in fp]))
+
+            # get the labels
+            # useless? 
+            #labels.append(bbox.label)
+
+            # pack everything
             list_fp.append((fp, bbox.label))
 
-        coords = np.array(coords)
-        labels = np.array([1 if l == "vehicle" else 2 for l in labels])
+
+        # coords = np.array(coords)
+        # labels = np.array([1 if l == "vehicle" else 2 for l in labels])
         # print(coords)
         # print(labels)
 
         return list_fp
 
 
-
-
-if __name__ == "__main__":
-    lib = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
-    lib.bonjour()
+# if __name__ == "__main__":
+    # lib = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
+    # lib.bonjour()
 

@@ -22,19 +22,23 @@ from metrics import TFPN, toOccup
 import csv
 import sys
 import argparse
-from os import path, makedirs
+from os import path, makedirs 
 
 import rasterizer
 
+# Initial map descriptors
 MAPSIZE = 120.0
 STEPGRID = 5
 GRIDSIZE = int(MAPSIZE) * STEPGRID
 
+# Look up tables
 FUS_LUT = {'Dempster': 0, 'Conjunctive': 1, 'Disjunctive': 2}
 LABEL_LUT = {'Vehicle': int('0b01000000', 2), 'Pedestrian': int('0b10000000', 2), 'Terrain': int('0b00000010', 2)}
 DECIS_LUT = {'Avg_Max': -1, 'BetP': 0, 'Bel': 1, 'Pl': 2, 'BBA': 3}
 TFPN_LUT = {'TP': 0, 'TN': 1, 'FP': 2, 'FN': 3}
 
+
+# Manage the arguments
 argparser = argparse.ArgumentParser(description=__doc__)
 argparser.add_argument(
     '--algo',
@@ -101,6 +105,8 @@ if not path.isdir(SAVE_PATH):
 
 ANTOINE_M = False
 
+# for parallel processing. 
+# depackage the data to fit the classical argument disposition.
 def get_bbox(data):
     agent, frame = data
     return agent.get_visible_bbox(frame=frame)
@@ -109,23 +115,26 @@ def get_pred(data):
     agent, frame = data
     return agent.get_pred(frame=frame)
 
+
+
+# Generate the local evidential map from one agent
 def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, agent_3D:List[Bbox3D] = None, antoine=False):
 
     egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE)) # create an Evidential Grid Generator
     mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8) # empty mask map
 
     if agent_out != None:
-        # Extract 2D bounding boxes and the label from the dataset
+        # Extract 2D footprints and the label from 2d bounding box of the dataset
         eggout = egg.projector_resterizer(agent_out, confjsonpath=args.json_path)
 
-        # Extract the bounding boxes 
+        # Extract the 2D footprints 
         fp_poly = np.array([np.array([(v.get().T)[0] for v in poly], dtype=np.float32) for (poly, _) in eggout])
 
         # Extract the labels
         fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 3 if label == 'terrain' else 0 for (_, label) in eggout], dtype=
         np.int32)
 
-        # Project the 2D bounding boxes and create a mask
+        # Rasterize the 2D footprints and create a mask
         rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
 
 
@@ -164,6 +173,8 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
     return (mask, evid_map)
 
 
+
+# get the required value to compute the metrics
 def record(sem_gnd:np.ndarray, sem_test:np.ndarray, gridsize:int, frame:int):
     occ_gnd = toOccup(sem_gnd, gridsize)
     occ_test = toOccup(sem_test, gridsize)
@@ -179,8 +190,14 @@ def record(sem_gnd:np.ndarray, sem_test:np.ndarray, gridsize:int, frame:int):
     return outs
 
 
+########################################
+###                                  ###
+###          STARTING POINT          ###
+###                                  ###
+########################################
 
-
+# Read the dataset 
+# get dataset information (agents available)
 agents:List[Agent] = []
 with open(f"{dataset_path}//information.json") as json_file:
     info = json.load(json_file)
@@ -188,19 +205,21 @@ with open(f"{dataset_path}//information.json") as json_file:
     agents = [Agent(dataset_path=dataset_path, id=idx) for idx, agent in enumerate(agent_l) if agent['type'] != "pedestrian"]
     agents2gndtruth = [Agent(dataset_path=dataset_path, id=idx) for idx, agent in enumerate(agent_l) if agent['type'] != "infrastructure"]
 
+# Get the "active" agent
 with open(args.json_path) as json_file:
     data = json.load(json_file)
+    # Active agents are selected here
     idx2read = data['index to read'] # [1, 6, 7, 8, 9, 10, 11]
     json_file.close()
     if idx2read != None:
         agents = [agents[i] for i in idx2read]
 
-
+# Print aquired active agents
 for idx, agent in enumerate(agents):
     print(f"{idx} : \t{agent}")
-    
-fieldsname = ['frame']
 
+# Prepare metrics recordings 
+fieldsname = ['frame']
 for key in TFPN_LUT:
     fieldsname.append(f'occup_{key}')
 
@@ -208,13 +227,15 @@ for keylab in LABEL_LUT:
     for key_tfpn in TFPN_LUT:
         fieldsname.append(f'{keylab}_{key_tfpn}')
 
-print(fieldsname)
+# print(fieldsname)
 
+# create the outputs file for avg method
 recfile = open(f'{SAVE_PATH}/avg.csv', mode='w')
 writer = csv.DictWriter(recfile, fieldnames=fieldsname)
 writer.writeheader()
 recfile.close()
 
+# create the outputs file for other methods
 for decision_maker in DECIS_LUT:
     if decision_maker == 'Avg_Max':
         continue
@@ -223,29 +244,48 @@ for decision_maker in DECIS_LUT:
     writer.writeheader()
     recfile.close()
 
+####
+####    Processing for each frames
+####
+
+# // processing setup
 pool = Pool(multiprocessing.cpu_count())
+
+# FOR EACH FRAME OF A SELECTION
 for frame in tqdm(range(args.start, args.end)):
+
+    # Every agent + given frame ID
     data = [(agent, frame) for agent in agents]
     if ANTOINE_M:
-        bboxes = [a.get_pred(frame) for a in agents]
-        mask_eveid_maps = [generate_evid_grid(agent_3D=d, antoine=True) for d in bboxes]
+        # TODO
+        pass
     else:
+        # from the dataset, retrieve the 2D bounding box
         bboxes = pool.map(get_bbox, data)
+        # create the evidential map + the mask for each agent
         mask_eveid_maps = [generate_evid_grid(agent_out=d) for d in bboxes]
+    # datashape conversion
+    # [(mask, evid_map)] -> [mask], [evid_maps]
     mask, evid_maps = zip(*mask_eveid_maps)
-
+    
+    # with every agent info, create the ground truth map
     gnd_agent = [agent.get_state(frame).get_bbox3d() for agent in agents2gndtruth]
     mask_eveid_maps_GND = generate_evid_grid(agent_3D=gnd_agent)
     (mask_GND, evid_maps_GND) = mask_eveid_maps_GND
 
+    # Merging with memory method
     if CPT_MEAN:
+        # merge the maps with joint probability
         mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
+        # take the decision from probability to fixed semantic
         sem_map_mean = cred2pign(mean_map, method=-1)
+        # Save the value required for the metrics
         with open(f'{SAVE_PATH}/avg.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
             writer.writerow(record(mask_GND, sem_map_mean, GRIDSIZE, frame))
             recfile.close()
         
+        # save the maps
         if args.save_img:
             if not path.isdir(f'{SAVE_PATH}/Mean/RAW/'):
                 makedirs(f'{SAVE_PATH}/Mean/RAW/')
@@ -255,8 +295,9 @@ for frame in tqdm(range(args.start, args.end)):
             plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
             plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
 
-
+    # Merge the evidential map for a given algorithm 
     evid_out = DST_merger(evid_maps=list(evid_maps), gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+    # Save the maps
     if args.save_img:
         if not path.isdir(f'{SAVE_PATH}/{ALGO}/RAW/'):
             makedirs(f'{SAVE_PATH}/{ALGO}/RAW/')
@@ -264,22 +305,25 @@ for frame in tqdm(range(args.start, args.end)):
             plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
             plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
 
+    # Test every decision taking algorithm except average max
     for decision_maker in DECIS_LUT:
         if decision_maker == 'Avg_Max':
             continue
-
+        
+        # fix the global evid. map to a semantic map with a given algoritm
         sem_map = cred2pign(evid_out, method=DECIS_LUT[decision_maker])
         with open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
             writer.writerow(record(mask_GND, sem_map, GRIDSIZE, frame))
             recfile.close()
 
+        # Save the semantic map
         if args.save_img:
             if not path.isdir(f'{SAVE_PATH}/{ALGO}/{decision_maker}/'):
                 makedirs(f'{SAVE_PATH}/{ALGO}/{decision_maker}/')
             plt.imsave(f'{SAVE_PATH}/{ALGO}/{decision_maker}/{frame:06d}.png', sem_map)
 
-
+    # Manage the GUI
     if args.gui:
         if CPT_MEAN:
             axes[0, 0].imshow(mean_map)

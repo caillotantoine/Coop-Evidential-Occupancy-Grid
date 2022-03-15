@@ -125,11 +125,9 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     cwTc = getCwTc()
     wTcw = sensorT
     wTc = wTcw * cwTc
-    
 
-    mesh_world = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
-    mesh_camera = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
-    mesh_camera.transform(wTc.get())
+    print(bbox.get_label())
+
 
     pts4 = [pt2.vec4(z=1) for pt2 in bbox.get_pts()]
     pts_ip_c = [((invK * p).vec3() * 120).vec4() for p in pts4]
@@ -137,25 +135,39 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     pts_ip_cw = [(wTc * pt4) for pt4 in pts_ip_c]
     pts_ip_cw_ctrl = [(wTc * pt4) for pt4 in pts_ip_c_ctrl]
     out_pts:List[vec4] = []
+
+    
     for i, pt in enumerate(pts_ip_cw):
+        # check if the line points toward the sky.
         if pt.z() < pts_ip_cw_ctrl[i].z():
             line = plkrLine(wTc.get_translation(), pts_ip_cw[i]) 
             out_pts.append(plane.intersect(line))
+        
+        # if so, take the point outside the map and fix its height to 0
+        # Yes, this is a cheat trick.
         else:
             p = vec4(x=pt.x(), y=pt.y(), z=0)
             out_pts.append(p)
+
+    # TODO 
+
+
     # lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
     # out_pts = [plane.intersect(line) for line in lines]
     for i, pt in enumerate(out_pts):
         pt.normalize()
         if debug != None:
             print(pt)
-
     
     out_pts = [pt4.vec3() for pt4 in out_pts]
     out_pts = [pt3.vec2() for pt3 in out_pts]
     if debug == None:
         return out_pts
+
+
+    mesh_world = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera.transform(wTc.get())
 
     mesh_ip_c = [o3d.geometry.TriangleMesh.create_sphere(radius=0.1) for pt in pts_ip_c]
     for idx, mesh in enumerate(mesh_ip_c):
