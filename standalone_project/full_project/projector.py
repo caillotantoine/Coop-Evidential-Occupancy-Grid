@@ -9,6 +9,7 @@ import cv2 as cv
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from plucker import plkrLine, plkrPlane
+from typing import Tuple, List
 
 import open3d as o3d
 
@@ -162,11 +163,13 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     out_pts = [pt4.vec3() for pt4 in out_pts]
     out_pts = [pt3.vec2() for pt3 in out_pts]
 
+    output:List[Tuple(List[vec2], str)] = []
+
 
     # Reduce the footprint in function of the class
     if fpSizeMax != None and bboxlabel in fpSizeMax:
         sPos = sensorT.get_translation()
-
+        output.append((out_pts, 'unknown'))
         # get the closest point distance 
         dmin = np.inf
         for pt in out_pts:
@@ -187,11 +190,14 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
                 v = vec3(x=k*v.x(), y=k*v.y(), z=1)
                 vout = vec2(x=v.x()+sPos.x(), y=v.y()+sPos.y())
                 out_pts[i] = vout
+        output.append((out_pts, bboxlabel))
+    else:
+        output.append((out_pts, bboxlabel))
 
 
     # if not in debug, break and return
     if debug == None or debug == False:
-        return out_pts
+        return output
 
 
     mesh_world = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])

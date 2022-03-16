@@ -1,5 +1,5 @@
 # Config file name after "config_" with no extention 
-configname="perfect_full_testBBA14"
+configname="perfect_full_testBBA15"
 
 # Run for each algorithm
 echo "Dempster"

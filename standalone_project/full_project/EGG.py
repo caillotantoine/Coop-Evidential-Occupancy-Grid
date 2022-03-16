@@ -58,7 +58,7 @@ class EGG:
             #labels.append(bbox.label)
 
             # pack everything
-            list_fp.append((fp, bbox.label))
+            list_fp.extend(fp)
 
 
         # coords = np.array(coords)
