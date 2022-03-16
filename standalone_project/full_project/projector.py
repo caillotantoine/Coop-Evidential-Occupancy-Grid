@@ -117,7 +117,7 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
         return None
     return out_bbox
 
-def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat, vMat:TMat = None, vbbox3d:Bbox3D = None, debug = None) -> List[vec2]:
+def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat, fpSizeMax=None, vMat:TMat = None, vbbox3d:Bbox3D = None, debug = None) -> List[vec2]:
     invK = deepcopy(kMat)
     invK.inv()
     # print(invK)
@@ -126,7 +126,7 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     wTcw = sensorT
     wTc = wTcw * cwTc
 
-    print(bbox.get_label())
+    bboxlabel = bbox.get_label()
 
 
     pts4 = [pt2.vec4(z=1) for pt2 in bbox.get_pts()]
@@ -134,9 +134,10 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
     pts_ip_c_ctrl = [invK * p for p in pts4]
     pts_ip_cw = [(wTc * pt4) for pt4 in pts_ip_c]
     pts_ip_cw_ctrl = [(wTc * pt4) for pt4 in pts_ip_c_ctrl]
+
+
     out_pts:List[vec4] = []
 
-    
     for i, pt in enumerate(pts_ip_cw):
         # check if the line points toward the sky.
         if pt.z() < pts_ip_cw_ctrl[i].z():
@@ -149,19 +150,47 @@ def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat,
             p = vec4(x=pt.x(), y=pt.y(), z=0)
             out_pts.append(p)
 
-    # TODO 
-
-
     # lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
     # out_pts = [plane.intersect(line) for line in lines]
+    # Normalize the points to a correct position in the map
     for i, pt in enumerate(out_pts):
         pt.normalize()
         if debug != None:
             print(pt)
     
+    #convert from vec4 to vec2
     out_pts = [pt4.vec3() for pt4 in out_pts]
     out_pts = [pt3.vec2() for pt3 in out_pts]
-    if debug == None:
+
+
+    # Reduce the footprint in function of the class
+    if fpSizeMax != None and bboxlabel in fpSizeMax:
+        sPos = sensorT.get_translation()
+
+        # get the closest point distance 
+        dmin = np.inf
+        for pt in out_pts:
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d < dmin:
+                dmin = d
+
+        # get distance max in function of the class
+        dmax = dmin+fpSizeMax[bboxlabel]
+        
+        # crop the footprint
+        for i,pt in enumerate(out_pts):
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d > dmax:
+                k = dmax / d
+                v = vec3(x=k*v.x(), y=k*v.y(), z=1)
+                vout = vec2(x=v.x()+sPos.x(), y=v.y()+sPos.y())
+                out_pts[i] = vout
+
+
+    # if not in debug, break and return
+    if debug == None or debug == False:
         return out_pts
 
 
@@ -251,7 +280,7 @@ if __name__ == '__main__':
 
     ground = plkrPlane()
     
-    traces = project_BBox2DOnPlane(ground, bbox, k, wTcw, vMat=vMat, vbbox3d=bbox3d, debug=True)
+    traces = project_BBox2DOnPlane(ground, bbox, k, wTcw, vMat=vMat, vbbox3d=bbox3d, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00}, debug=False)
     for t in traces:
         print(t)
     

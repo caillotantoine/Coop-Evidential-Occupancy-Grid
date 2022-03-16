@@ -47,7 +47,7 @@ class EGG:
 
         for bbox in bbox_list:
             # project a bbox as a footprint
-            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT) 
+            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00}) 
 
             # get the footprint vertex on the map
             # useless? 
