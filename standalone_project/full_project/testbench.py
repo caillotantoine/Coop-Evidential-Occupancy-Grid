@@ -140,7 +140,23 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
 
     elif agent_3D != None:
         # TO DO : Treating 3D bounding box
-        pass
+        for agent in agent_3D:
+            bboxsize = agent.get_size()
+            label = agent.get_label()
+            poseT = agent.get_TPose()
+            
+            bin_mask = [np.array([0.5, 0.5, 0.0, 1.0]), np.array([0.5, -0.5, 0.0, 1.0]), np.array([-0.5, -0.5, 0.0, 1.0]), np.array([-0.5, 0.5, 0.0, 1.0])]
+            
+            centered_fps = [(bboxsize.vec4().get().T * m).T for m in bin_mask]
+
+            fps = [poseT @ v for v in centered_fps]
+            if antoine:
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps])
+            else:
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps])
+            
+            
+            cv.fillPoly(mask, pts=[fps_pix], color=(int('0b01000000', 2) if label == 'vehicle' else int('0b10000000', 2)))
 
     else: 
         raise NameError("Both agent_out and agent_3D are set to None. Assign a value to at least one of them.")
@@ -273,8 +289,20 @@ for frame in tqdm(range(args.start, args.end)):
     mask_eveid_maps_GND = generate_evid_grid(agent_3D=gnd_agent)
     (mask_GND, evid_maps_GND) = mask_eveid_maps_GND
 
+    
+
     # Merging with memory method
     if CPT_MEAN:
+
+        # Not related but save the ground truth.
+        # Since average is calculated once, ground truth is saved once to speed up
+        # TODO : create a dedicated argument
+        if args.save_img:
+            if not path.isdir(f'{SAVE_PATH}/GND/'):
+                makedirs(f'{SAVE_PATH}/GND/')    
+            plt.imsave(f'{SAVE_PATH}/GND/{frame:06d}.png', mask_GND)
+
+
         # merge the maps with joint probability
         mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
         # take the decision from probability to fixed semantic
@@ -301,9 +329,9 @@ for frame in tqdm(range(args.start, args.end)):
     if args.save_img:
         if not path.isdir(f'{SAVE_PATH}/{ALGO}/RAW/'):
             makedirs(f'{SAVE_PATH}/{ALGO}/RAW/')
-            plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-v-p-t.png', evid_out[:,:,[1, 2, 4]])
-            plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
-            plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
+        plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-v-p-t.png', evid_out[:,:,[1, 2, 4]])
+        plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
+        plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
 
     # Test every decision taking algorithm except average max
     for decision_maker in DECIS_LUT:
