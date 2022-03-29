@@ -55,7 +55,7 @@ argparser.add_argument(
     '--gui',
     metavar='G',
     type=bool,
-    default=False,
+    default=True,
     help='Show the GUI (default False).')
 argparser.add_argument(
     '--save_img',
@@ -66,7 +66,7 @@ argparser.add_argument(
     '--start',
     metavar='S',
     type=int,
-    default=10,
+    default=10, #10
     help='Starting point in the dataset (default 10).')
 argparser.add_argument(
     '--end',
@@ -205,6 +205,12 @@ def record(sem_gnd:np.ndarray, sem_test:np.ndarray, gridsize:int, frame:int):
 
     return outs
 
+# give the numlber of observation per cells
+def nObservMask(masks_in:List[np.ndarray]) -> np.ndarray:
+    maskout = np.zeros(shape=masks_in[0].shape)
+    for mask in masks_in:
+        maskout += np.where(mask > 0, 1, 0)
+    return maskout
 
 ########################################
 ###                                  ###
@@ -283,6 +289,11 @@ for frame in tqdm(range(args.start, args.end)):
     # datashape conversion
     # [(mask, evid_map)] -> [mask], [evid_maps]
     mask, evid_maps = zip(*mask_eveid_maps)
+
+    # get to know which cells are observed
+    observed_zones = nObservMask(mask)
+
+    
     
     # with every agent info, create the ground truth map
     gnd_agent = [agent.get_state(frame).get_bbox3d() for agent in agents2gndtruth]
@@ -354,9 +365,9 @@ for frame in tqdm(range(args.start, args.end)):
     # Manage the GUI
     if args.gui:
         if CPT_MEAN:
-            axes[0, 0].imshow(mean_map)
+            axes[0, 0].imshow(mask[0])
             axes[0, 0].set_title('Mean map')
-            axes[1, 1].imshow(sem_map_mean)
+            axes[1, 1].imshow(mask[1])
             axes[1, 1].set_title('Sem map mean')
         else:
             axes[0, 0].imshow(np.array(mask)[[0, 1, 2]].transpose(1, 2, 0))
@@ -369,7 +380,7 @@ for frame in tqdm(range(args.start, args.end)):
         axes[0, 2].set_title('VP, VT, PT')
         axes[1, 0].imshow(mask_GND)
         axes[1, 0].set_title('Ground truth')
-        axes[1, 2].imshow(sem_map)
+        axes[1, 2].imshow(np.where(observed_zones>=2, 1, 0))
         axes[1, 2].set_title('sem_map evid')
         fig.suptitle(f'Frame {frame}')
         plt.pause(0.01)
