@@ -2,6 +2,7 @@ import ctypes
 import multiprocessing
 from turtle import color
 import numpy as np
+from torch import dtype
 from agent import Agent
 from vector import vec2, vec3, vec4
 from Tmat import TMat
@@ -140,6 +141,7 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
 
     elif agent_3D != None:
         # TO DO : Treating 3D bounding box
+        mask = np.where(mask == 0, 2, mask)
         for agent in agent_3D:
             bboxsize = agent.get_size()
             label = agent.get_label()
@@ -191,17 +193,17 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
 
 
 # get the required value to compute the metrics
-def record(sem_gnd:np.ndarray, sem_test:np.ndarray, gridsize:int, frame:int):
+def record(sem_gnd:np.ndarray, sem_test:np.ndarray, zones:np.ndarray, coop_lvl:int, gridsize:int, frame:int):
     occ_gnd = toOccup(sem_gnd, gridsize)
     occ_test = toOccup(sem_test, gridsize)
 
     outs = {'frame': frame}
     for key in TFPN_LUT:
-        outs[f'occup_{key}'] = TFPN(occ_gnd, occ_test, gridsize, TFPN_LUT[key], 0)
+        outs[f'occup_{key}'] = TFPN(occ_gnd, occ_test, zones, coop_lvl, gridsize, TFPN_LUT[key], 0)
 
     for keylab in LABEL_LUT:
         for key_tfpn in TFPN_LUT:
-            outs[f'{keylab}_{key_tfpn}'] = TFPN(sem_gnd, sem_test, gridsize, TFPN_LUT[key_tfpn], LABEL_LUT[keylab])
+            outs[f'{keylab}_{key_tfpn}'] = TFPN(sem_gnd, sem_test, zones, coop_lvl, gridsize, TFPN_LUT[key_tfpn], LABEL_LUT[keylab])
 
     return outs
 
@@ -210,7 +212,7 @@ def nObservMask(masks_in:List[np.ndarray]) -> np.ndarray:
     maskout = np.zeros(shape=masks_in[0].shape)
     for mask in masks_in:
         maskout += np.where(mask > 0, 1, 0)
-    return maskout
+    return maskout.astype(np.uint8)
 
 ########################################
 ###                                  ###
@@ -321,7 +323,7 @@ for frame in tqdm(range(args.start, args.end)):
         # Save the value required for the metrics
         with open(f'{SAVE_PATH}/avg.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
-            writer.writerow(record(mask_GND, sem_map_mean, GRIDSIZE, frame))
+            writer.writerow(record(mask_GND, sem_map_mean, observed_zones, 2, GRIDSIZE, frame))
             recfile.close()
         
         # save the maps
@@ -330,7 +332,7 @@ for frame in tqdm(range(args.start, args.end)):
                 makedirs(f'{SAVE_PATH}/Mean/RAW/')
             if not path.isdir(f'{SAVE_PATH}/Mean/SEM/'):
                 makedirs(f'{SAVE_PATH}/Mean/SEM/')    
-            maprec = record(mask_GND, sem_map_mean, GRIDSIZE, frame)
+            maprec = record(mask_GND, sem_map_mean, observed_zones, 2, GRIDSIZE, frame)
             plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
             plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
 
@@ -353,7 +355,7 @@ for frame in tqdm(range(args.start, args.end)):
         sem_map = cred2pign(evid_out, method=DECIS_LUT[decision_maker])
         with open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
-            writer.writerow(record(mask_GND, sem_map, GRIDSIZE, frame))
+            writer.writerow(record(mask_GND, sem_map, observed_zones, 2, GRIDSIZE, frame))
             recfile.close()
 
         # Save the semantic map

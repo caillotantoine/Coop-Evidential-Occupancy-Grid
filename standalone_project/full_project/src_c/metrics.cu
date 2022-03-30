@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int TFPN_CPP(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label);
+int TFPN_CPP(unsigned char *truth, unsigned char *test, unsigned char *zone, int coop_lvl, int gridsize, unsigned char TFPN_sel, unsigned char label);
 void toOccup_CPP(unsigned char *sem_map, unsigned char *out, int gridsize);
 int TP(unsigned char truth, unsigned char test, unsigned char label);
 int TN(unsigned char truth, unsigned char test, unsigned char label);
@@ -9,9 +9,9 @@ int FP(unsigned char truth, unsigned char test, unsigned char label);
 int FN(unsigned char truth, unsigned char test, unsigned char label);
 
 extern "C" {
-    int TFPN(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label)
+    int TFPN(unsigned char *truth, unsigned char *test, unsigned char *zone, int coop_lvl, int gridsize, unsigned char TFPN_sel, unsigned char label)
     {
-        return TFPN_CPP(truth, test, gridsize, TFPN_sel, label);
+        return TFPN_CPP(truth, test, zone, coop_lvl, gridsize, TFPN_sel, label);
     }
     void toOccup(unsigned char *sem_map, unsigned char *out, int gridsize)
     {
@@ -34,7 +34,7 @@ void toOccup_CPP(unsigned char *sem_map, unsigned char *out, int gridsize)
         out[i] = sem_map[i] > 0b00000010;
 }
 
-int TFPN_CPP(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label)
+int TFPN_CPP(unsigned char *truth, unsigned char *test, unsigned char *zone, int coop_lvl,  int gridsize, unsigned char TFPN_sel, unsigned char label)
 {
     int i = 0;
     int cnt = 0;
@@ -42,6 +42,9 @@ int TFPN_CPP(unsigned char *truth, unsigned char *test, int gridsize, unsigned c
 
     for(i=0; i<gridsize*gridsize; i++)
     {
+        if(zone[i] < coop_lvl)
+            continue;
+
         switch(TFPN_sel)
         {
             case 0: 
@@ -69,7 +72,7 @@ int TP(unsigned char truth, unsigned char test, unsigned char label)
     if(label == 0x00)
         return (truth == test) && (test != 0x00);
     else
-        return (truth == test) && (test == label);
+        return (test == label) && (truth == label);
 }
 
 int TN(unsigned char truth, unsigned char test, unsigned char label)
@@ -77,7 +80,7 @@ int TN(unsigned char truth, unsigned char test, unsigned char label)
     if(label == 0x00)
         return (truth == test) && (test == 0x00);
     else
-        return (truth == test) && (test != label);
+        return (test != label) && (truth != label);
 }
 
 int FP(unsigned char truth, unsigned char test, unsigned char label)
@@ -85,7 +88,7 @@ int FP(unsigned char truth, unsigned char test, unsigned char label)
     if(label == 0x00)
         return (truth != test) && (test != 0x00);
     else
-        return (truth != test) && (test == label);
+        return (test == label) && (truth != label);
 }
 
 int FN(unsigned char truth, unsigned char test, unsigned char label)
@@ -93,5 +96,5 @@ int FN(unsigned char truth, unsigned char test, unsigned char label)
     if(label == 0x00)
         return (truth != test) && (test == 0x00);
     else
-        return (truth != test) && (test != label);
+        return (test != label) && (truth == label);
 }

@@ -11,9 +11,9 @@ metrics = cdll.LoadLibrary('/home/caillot/Documents/PhD/Projets/Coop-Evidential-
 
     #  int TFPN(unsigned char *truth, unsigned char *test, int gridsize, unsigned char TFPN_sel, unsigned char label)
 metrics.TFPN.restype = c_int
-metrics.TFPN.argtypes = [np.ctypeslib.ndpointer(dtype=np.uint8), np.ctypeslib.ndpointer(dtype=np.uint8), c_int, c_char, c_char] 
-def TFPN( truth:np.ctypeslib.ndpointer(dtype=np.uint8),  test:np.ctypeslib.ndpointer(dtype=np.uint8), gridsize:c_int, TFPN_sel:c_char, label:c_char):
-        return metrics.TFPN( truth,  test, gridsize, TFPN_sel, label) 
+metrics.TFPN.argtypes = [np.ctypeslib.ndpointer(dtype=np.uint8), np.ctypeslib.ndpointer(dtype=np.uint8), np.ctypeslib.ndpointer(dtype=np.uint8), c_int, c_int, c_char, c_char] 
+def TFPN( truth:np.ctypeslib.ndpointer(dtype=np.uint8),  test:np.ctypeslib.ndpointer(dtype=np.uint8), zones: np.ctypeslib.ndpointer(dtype=np.uint8), coop_lvl:c_char, gridsize:c_int, TFPN_sel:c_char, label:c_char):
+        return metrics.TFPN( truth, test, zones, coop_lvl, gridsize, TFPN_sel, label) 
 
 
 #  void toOccup(unsigned char *sem_map, unsigned char *out, int gridsize)
