@@ -1,3 +1,4 @@
+from copy import deepcopy
 import ctypes
 import multiprocessing
 from turtle import color
@@ -64,6 +65,11 @@ argparser.add_argument(
     default=False,
     help='Save maps as images (default False).')
 argparser.add_argument(
+    '--loopback_evid',
+    type=bool,
+    default=True,
+    help='Loop back the t-1 evidential map as an entry of the agents (default False).')
+argparser.add_argument(
     '--start',
     metavar='S',
     type=int,
@@ -72,7 +78,7 @@ argparser.add_argument(
 argparser.add_argument(
     '--pdilate',
     type=int,
-    default=-1, #10
+    default=2, #10
     help='Pedestrian Dilation Factor. -1: Off, Choose a value between 0 and 5. (default -1)')
 argparser.add_argument(
     '--gdilate',
@@ -87,7 +93,7 @@ argparser.add_argument(
     help='Ending point in the dataset (default 500).')
 argparser.add_argument(
     '--dataset_path',
-    default='/home/caillot/Documents/Dataset/CARLA_Dataset_B',
+    default='/home/caillot/Documents/Dataset/CARLA_Dataset_intersec_dense',
     help='Path of the dataset.')
 argparser.add_argument(
     '--save_path',
@@ -96,7 +102,7 @@ argparser.add_argument(
 
 argparser.add_argument(
     '--json_path',
-    default='./standalone_project/full_project/configs/config_perfect_full.json',
+    default='./standalone_project/full_project/configs/config_perfect_full_testBBA15.json',
     help='Configuration json file path.')
 
 args = argparser.parse_args()
@@ -294,6 +300,9 @@ for decision_maker in DECIS_LUT:
 # // processing setup
 pool = Pool(multiprocessing.cpu_count())
 
+# Loop back of the evidential map
+loopback_evid = None
+
 # FOR EACH FRAME OF A SELECTION
 for frame in tqdm(range(args.start, args.end)):
 
@@ -310,6 +319,8 @@ for frame in tqdm(range(args.start, args.end)):
     # datashape conversion
     # [(mask, evid_map)] -> [mask], [evid_maps]
     mask, evid_maps = zip(*mask_eveid_maps)
+    
+    
 
     # get to know which cells are observed
     observed_zones = nObservMask(mask)
@@ -355,8 +366,21 @@ for frame in tqdm(range(args.start, args.end)):
             plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
             plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
 
-    # Merge the evidential map for a given algorithm 
-    evid_out = DST_merger(evid_maps=list(evid_maps), gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+    evid_maps = list(evid_maps)
+
+    if args.loopback_evid:
+        evid_buffer = DST_merger(evid_maps=evid_maps, gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+        # insert the loopback as first element
+        if type(loopback_evid) != type(None):
+            evid_out = DST_merger(evid_maps=[loopback_evid, evid_buffer], gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+        else:
+            evid_out = evid_buffer
+        loopback_evid = evid_buffer
+    else:
+        # Merge the evidential map for a given algorithm
+        evid_out = DST_merger(evid_maps=evid_maps, gridsize=GRIDSIZE, CUDA=False, method=ALGOID)
+
+
     # Save the maps
     if args.save_img:
         if not path.isdir(f'{SAVE_PATH}/{ALGO}/RAW/'):
@@ -403,8 +427,12 @@ for frame in tqdm(range(args.start, args.end)):
         else:
             axes[0, 0].imshow(np.array(mask)[[0, 1, 2]].transpose(1, 2, 0))
             axes[0, 0].set_title('Mask')
-            axes[1, 1].imshow(toOccup(sem_map, GRIDSIZE))
-            axes[1, 1].set_title('Occupancy grid')
+            if type(loopback_evid) != type(None):
+                axes[1, 1].imshow(loopback_evid[:,:,[1, 2, 4]])
+                axes[1, 1].set_title('Loopback')
+            else:
+                axes[1, 1].imshow(toOccup(sem_map, GRIDSIZE))
+                axes[1, 1].set_title('Occupancy grid')
         axes[0, 1].imshow(evid_out[:,:,[1, 2, 4]])
         axes[0, 1].set_title('V, P, T')
         axes[0, 2].imshow(evid_out[:,:,[3, 5, 6]])
