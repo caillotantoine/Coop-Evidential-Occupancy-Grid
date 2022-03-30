@@ -67,8 +67,18 @@ argparser.add_argument(
     '--start',
     metavar='S',
     type=int,
-    default=10, #10
+    default=130, #10
     help='Starting point in the dataset (default 10).')
+argparser.add_argument(
+    '--pdilate',
+    type=int,
+    default=-1, #10
+    help='Pedestrian Dilation Factor. -1: Off, Choose a value between 0 and 5. (default -1)')
+argparser.add_argument(
+    '--gdilate',
+    type=int,
+    default=-1, #10
+    help='Dilation Factor for every object at mask level. -1: Off, Choose a value between 0 and 5. (default -1)')
 argparser.add_argument(
     '--end',
     metavar='E',
@@ -137,6 +147,15 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
 
         # Rasterize the 2D footprints and create a mask
         rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
+
+        # Dilate everything on teh mask
+        if args.gdilate >= 0:
+            dilatation_size = args.gdilate
+            element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2 * dilatation_size + 1, 2 * dilatation_size + 1), (dilatation_size, dilatation_size))
+            for o in [64, 128]:
+                obj_mask = np.bitwise_and(mask, o, dtype=np.uint8)
+                dil_ped_mask = cv.dilate(obj_mask, element)
+                mask = np.where(dil_ped_mask == o, dil_ped_mask, mask)
 
 
     elif agent_3D != None:
@@ -353,6 +372,16 @@ for frame in tqdm(range(args.start, args.end)):
         
         # fix the global evid. map to a semantic map with a given algoritm
         sem_map = cred2pign(evid_out, method=DECIS_LUT[decision_maker])
+
+
+        # Grow pedestrians
+        if args.pdilate >= 0:
+            pedestrian_mask = np.bitwise_and(sem_map, 128, dtype=np.uint8)
+            dilatation_size = args.pdilate 
+            element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2 * dilatation_size + 1, 2 * dilatation_size + 1), (dilatation_size, dilatation_size))
+            dil_ped_mask = cv.dilate(pedestrian_mask, element)
+            sem_map = np.where(dil_ped_mask == 128, dil_ped_mask, sem_map)
+
         with open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
             writer.writerow(record(mask_GND, sem_map, observed_zones, 2, GRIDSIZE, frame))
@@ -382,7 +411,7 @@ for frame in tqdm(range(args.start, args.end)):
         axes[0, 2].set_title('VP, VT, PT')
         axes[1, 0].imshow(mask_GND)
         axes[1, 0].set_title('Ground truth')
-        axes[1, 2].imshow(np.where(observed_zones>=2, 1, 0))
+        axes[1, 2].imshow(sem_map)
         axes[1, 2].set_title('sem_map evid')
         fig.suptitle(f'Frame {frame}')
         plt.pause(0.01)
