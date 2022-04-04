@@ -77,7 +77,7 @@ class Bbox2D(Bbox):
     def __init__(self, pose:vec2, size:vec2, label:str) -> None:
         super().__init__(pose, size, None, label)
 
-    # From a set of points in 3D, find the bounding box
+    # From a set of points, find the bounding box
     def set_from_pts(self, points: List[vec2]):
         lpts = []
         for v in points:

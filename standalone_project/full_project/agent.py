@@ -80,6 +80,12 @@ class Agent:
                 bbox_pose = vec3(ox, oy, oz)
                 self.bbox3d = Bbox3D(bbox_pose, bboxsize, self.label)
                 self.bbox3d.set_TPose(self.Tpose.get())
+                 
+                #   Fix the Tpose for pedestrian (they're flying)    
+                if self.label == "pedestrian":
+                    self.Tpose.tmat[2:3] = sz
+
+                
 
         return self
 
@@ -156,11 +162,16 @@ class Agent:
             img = cv.imread(self.mypath+f'camera_semantic_segmentation/{frame:06d}.png') 
 
             bbox2:List[Bbox2D] = []
+            bbox3pts:List[List[vec2]] = []
             for a in agents:
                 a.get_state(frame)
-                bbox = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, img)
+                projected = prj.projector_filter(a.get_bbox3d(), a.get_pose(), k_mat, camPose, img)
+                if projected is None:
+                    continue
+                (bbox, points) = projected
                 # print(f"\t{bbox}")
                 bbox2.append(bbox)
+                bbox3pts.append(points)
 
             # (w,h) = np.shape(img)
             h, w,_ = img.shape
@@ -172,7 +183,7 @@ class Agent:
             # print(bbox2)
             
 
-            if plot != None:
+            if plot is not None:
                 img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
                 color = (0, 255, 0)
                 thickness = 2
@@ -182,6 +193,14 @@ class Agent:
                     # print(pts)
                     for i in range(len(pts)):
                         img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
+                color = (0, 0, 255)
+                thickness = 1
+                for points in bbox3pts:
+                    pts = [tuple(np.transpose(pt.get())[0].astype(int).tolist()) for pt in points]
+                    # print(pts)
+                    for i in range(len(pts)):
+                        img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
+                    
                 plot.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
                 plot.draw()
                 plt.pause(0.001)

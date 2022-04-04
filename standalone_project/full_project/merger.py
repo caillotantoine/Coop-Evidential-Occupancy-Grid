@@ -6,16 +6,16 @@ from copy import deepcopy
 merger = cdll.LoadLibrary('./standalone_project/full_project/src_c/merger.so')
 
 #  void mean_merger(unsigned char *masks, int gridsize, int n_agents, float *out)
-merger.mean_merger.argtypes = [np.ctypeslib.ndpointer(dtype=np.uint8), c_int, c_int, np.ctypeslib.ndpointer(dtype=np.float32)] 
-def mean_merger_w( masks:np.ctypeslib.ndpointer(dtype=np.uint8), gridsize:c_int, n_agents:c_int,  out:np.ctypeslib.ndpointer(dtype=np.float32)):
-	merger.mean_merger( masks, gridsize, n_agents,  out) 
+merger.mean_merger.argtypes = [np.ctypeslib.ndpointer(dtype=np.uint8), c_int, c_int, np.ctypeslib.ndpointer(dtype=np.float32), np.ctypeslib.ndpointer(dtype=np.float32), c_int] 
+def mean_merger_w( masks:np.ctypeslib.ndpointer(dtype=np.uint8), gridsize:c_int, n_agents:c_int,  out:np.ctypeslib.ndpointer(dtype=np.float32), FE:np.ctypeslib.ndpointer(dtype=np.float32), nFE:c_int):
+	merger.mean_merger( masks, gridsize, n_agents,  out, np.array(FE).astype(np.float32), nFE) 
 
 
 
-def mean_merger_fast(masks, gridsize) -> np.ndarray:
+def mean_merger_fast(masks, gridsize, FE) -> np.ndarray:
     out = np.zeros(shape=(gridsize, gridsize, 3), dtype=np.float32)
     masks_arr = np.stack(masks, axis=2)
-    mean_merger_w(masks_arr, gridsize, len(masks), out)
+    mean_merger_w(masks_arr, gridsize, len(masks), out, FE, len(FE[1]))
     return out
 
 def mean_merger(masks, gridsize) -> np.ndarray:

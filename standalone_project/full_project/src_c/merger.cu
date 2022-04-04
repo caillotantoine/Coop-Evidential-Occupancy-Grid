@@ -19,7 +19,7 @@
 
 // CPP function to be available on library front end
 // void bonjour_cpp();
-void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out);
+void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out, float *FE, const int nFE);
 void DST_merger_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
 void DST_merger_CUDA_CPP(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method);
 
@@ -31,8 +31,8 @@ __host__ __device__ float Konflict(float *inout_cell, float *cell, int n_elem);
 
 // Interface of the SO library
 extern "C" {
-    void mean_merger(unsigned char *masks, int gridsize, int n_agents, float *out)
-        {mean_merger_cpp(masks, gridsize, n_agents, out);}
+    void mean_merger(unsigned char *masks, int gridsize, int n_agents, float *out, float *FE, const int nFE)
+        {mean_merger_cpp(masks, gridsize, n_agents, out, FE, nFE);}
     void DST_merger(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
         {DST_merger_CPP(evid_maps_in, inout, gridsize, nFE, n_agents, method);}
     void DST_merger_CUDA(float *evid_maps_in, float *inout, int gridsize, int nFE, int n_agents, unsigned char method)
@@ -206,12 +206,36 @@ int main(int argc, char **argv)
 //                      //
 //////////////////////////
 
+
+float get_normFactor(float *FE, const int nFE, int row)
+{
+    float normFactor = 0.0;
+    int i = 0;
+    for (i = 1; i<5; i<<=1)
+        normFactor += FE[row * nFE + i];
+    return 1.0/normFactor;
+}
+
 // Merger code for averaging cells
 
-void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out)
+void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *out, float *FE, const int nFE)
 {
-    int l = 0, i = 0, c = 0;
+    int l = 0, i = 0, c = 0, j = 0;
     int idx = 0;
+    float normFactor = 0.0;
+
+    // for(i = 0; i<5; i++)
+    // {
+    //     for(j = 0; j<nFE; j++)
+    //     {
+    //         printf("%2.3f \t", FE[i*nFE + j]);
+    //     }
+    //     printf("\n");
+    //     for(j = 0; j<3; j++)
+    //         printf("%d - %2.3f \t", 1<<j, FE[i * nFE + (1<<j)]);
+    //     printf("\n\n");
+    // }
+
     for(i=0; i<gridsize*gridsize; i++)
     {
         for(l=0; l<n_agents; l++)
@@ -219,27 +243,41 @@ void mean_merger_cpp(unsigned char *masks, int gridsize, int n_agents, float *ou
             switch(masks[i*n_agents + l])
             {
                 case VEHICLE_MASK:
-                    out[(i*3) + 0] += 1.0;
-                    out[(i*3) + 1] += 0.0;
-                    out[(i*3) + 2] += 0.0;
+                    #define FEROW 1
+                    for(j = 0; j<3; j++)
+                        out[(i*3) + j] += FE[FEROW * nFE + (1<<j)] * normFactor;
+                    // out[(i*3) + 0] += 1.0;
+                    // out[(i*3) + 1] += 0.0;
+                    // out[(i*3) + 2] += 0.0;
                     break;
 
                 case PEDESTRIAN_MASK:
-                    out[(i*3) + 0] += 0.0;
-                    out[(i*3) + 1] += 1.0;
-                    out[(i*3) + 2] += 0.0;
+                    #define FEROW 2
+                    normFactor = get_normFactor(FE, nFE, FEROW);
+                    for(j = 0; j<3; j++)
+                        out[(i*3) + j] += FE[FEROW * nFE + (1<<j)] * normFactor;
+                    // out[(i*3) + 0] += 0.0;
+                    // out[(i*3) + 1] += 1.0;
+                    // out[(i*3) + 2] += 0.0;
                     break;
 
                 case TERRAIN_MASK:
-                    out[(i*3) + 0] += 0.0;
-                    out[(i*3) + 1] += 0.0;
-                    out[(i*3) + 2] += 1.0;
+                    #define FEROW 3
+                    normFactor = get_normFactor(FE, nFE, FEROW);
+                    for(j = 0; j<3; j++)
+                        out[(i*3) + j] += FE[FEROW * nFE + (1<<j)] * normFactor;
+                    // out[(i*3) + 0] += 0.0;
+                    // out[(i*3) + 1] += 0.0;
+                    // out[(i*3) + 2] += 1.0;
                     break;
                 
                 default:
-                    out[(i*3) + 0] += 0.5;
-                    out[(i*3) + 1] += 0.5;
-                    out[(i*3) + 2] += 0.5;
+                    #define FEROW 3
+                    for(j = 0; j<3; j++)
+                        out[(i*3) + j] += 0.5;
+                    // out[(i*3) + 0] += 0.5;
+                    // out[(i*3) + 1] += 0.5;
+                    // out[(i*3) + 2] += 0.5;
                     break;
             }
         }

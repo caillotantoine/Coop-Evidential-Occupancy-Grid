@@ -69,9 +69,8 @@ def load_k(path_k) -> TMat:
     kmat.set(kmat4)
     return kmat
 
-def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -> Bbox2D:
+def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -> Tuple[Bbox2D, List[vec2]]:
     out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.label)
-    
     
     cwTc = getCwTc()
     wTc = sensorT * cwTc
@@ -116,7 +115,7 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
         return None
     if ratio <= threashold:
         return None
-    return out_bbox
+    return (out_bbox, pts_2d)
 
 def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat, fpSizeMax=None, vMat:TMat = None, vbbox3d:Bbox3D = None, debug = None) -> List[vec2]:
     invK = deepcopy(kMat)

@@ -2,6 +2,8 @@ from copy import deepcopy
 import ctypes
 import multiprocessing
 from turtle import color
+from joblib import parallel_backend
+import matplotlib
 import numpy as np
 from torch import dtype
 from agent import Agent
@@ -51,23 +53,23 @@ argparser.add_argument(
     '--mean',
     metavar='M',
     type=bool,
-    default=False,
+    default=True,
     help='Compute the mean (default False).')
 argparser.add_argument(
     '--gui',
     metavar='G',
     type=bool,
-    default=True,
+    default=False,
     help='Show the GUI (default False).')
 argparser.add_argument(
     '--save_img',
     type=bool,
-    default=False,
+    default=True,
     help='Save maps as images (default False).')
 argparser.add_argument(
     '--loopback_evid',
     type=bool,
-    default=True,
+    default=False,
     help='Loop back the t-1 evidential map as an entry of the agents (default False).')
 argparser.add_argument(
     '--start',
@@ -78,8 +80,13 @@ argparser.add_argument(
 argparser.add_argument(
     '--pdilate',
     type=int,
-    default=2, #10
+    default=-1, #10
     help='Pedestrian Dilation Factor. -1: Off, Choose a value between 0 and 5. (default -1)')
+argparser.add_argument(
+    '--cooplvl',
+    type=int,
+    default=2, #10
+    help='Number of observation to be a valid measure. -1: All, Choose a value between 0 and N users. (default 2)')
 argparser.add_argument(
     '--gdilate',
     type=int,
@@ -89,11 +96,11 @@ argparser.add_argument(
     '--end',
     metavar='E',
     type=int,
-    default=500,
+    default=160,
     help='Ending point in the dataset (default 500).')
 argparser.add_argument(
     '--dataset_path',
-    default='/home/caillot/Documents/Dataset/CARLA_Dataset_intersec_dense',
+    default='/home/caillot/Documents/Dataset/CARLA_Dataset_B',
     help='Path of the dataset.')
 argparser.add_argument(
     '--save_path',
@@ -126,7 +133,7 @@ ANTOINE_M = False
 # depackage the data to fit the classical argument disposition.
 def get_bbox(data):
     agent, frame = data
-    return agent.get_visible_bbox(frame=frame)
+    return agent.get_visible_bbox(frame=frame, plot=None)
 
 def get_pred(data):
     agent, frame = data
@@ -216,6 +223,23 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
     return (mask, evid_map)
 
 
+def IoU(TP:int, FP:int, FN:int) -> float:
+    try:
+        return (float(TP) / float(TP + FP + FN)) * 100.0
+    except ZeroDivisionError:
+        return np.NaN
+
+def F1(TP:int, FP:int, FN:int) -> float:
+    try:
+        return (float(TP) / (float(TP) + (float(FP + FN) / 2.0))) * 100.0
+    except ZeroDivisionError:
+        return np.NaN
+
+def CR(TP:int, TN:int, FP:int, FN:int) -> float:
+    try:
+        return (float(TP+TN) / float(TP+TN+FP+FN)) * 100.0
+    except ZeroDivisionError:
+        return np.NaN
 
 # get the required value to compute the metrics
 def record(sem_gnd:np.ndarray, sem_test:np.ndarray, zones:np.ndarray, coop_lvl:int, gridsize:int, frame:int):
@@ -225,12 +249,26 @@ def record(sem_gnd:np.ndarray, sem_test:np.ndarray, zones:np.ndarray, coop_lvl:i
     outs = {'frame': frame}
     for key in TFPN_LUT:
         outs[f'occup_{key}'] = TFPN(occ_gnd, occ_test, zones, coop_lvl, gridsize, TFPN_LUT[key], 0)
+    outs[f'occup_IoU'] = IoU(outs[f'occup_TP'], outs[f'occup_FP'], outs[f'occup_FN'])
+    outs[f'occup_F1'] = F1(outs[f'occup_TP'], outs[f'occup_FP'], outs[f'occup_FN'])
+    outs[f'occup_CR'] = CR(outs[f'occup_TP'], outs[f'occup_TN'], outs[f'occup_FP'], outs[f'occup_FN'])
 
+    mIoU = 0.0
+    mF1 = 0.0
     for keylab in LABEL_LUT:
         for key_tfpn in TFPN_LUT:
             outs[f'{keylab}_{key_tfpn}'] = TFPN(sem_gnd, sem_test, zones, coop_lvl, gridsize, TFPN_LUT[key_tfpn], LABEL_LUT[keylab])
+        
+        outs[f'{keylab}_IoU'] = IoU(outs[f'{keylab}_TP'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
+        outs[f'{keylab}_F1'] = F1(outs[f'{keylab}_TP'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
+        outs[f'{keylab}_CR'] = CR(outs[f'{keylab}_TP'], outs[f'{keylab}_TN'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
+        mIoU += outs[f'{keylab}_IoU']
+        mF1 += outs[f'{keylab}_F1']
+    outs[f'mIoU'] = mIoU / len(LABEL_LUT)
+    outs[f'mF1'] = mF1 / len(LABEL_LUT)
 
     return outs
+
 
 # give the numlber of observation per cells
 def nObservMask(masks_in:List[np.ndarray]) -> np.ndarray:
@@ -263,12 +301,13 @@ with open(args.json_path) as json_file:
     if idx2read != None:
         agents = [agents[i] for i in idx2read]
 
+
 # Print aquired active agents
 for idx, agent in enumerate(agents):
     print(f"{idx} : \t{agent}")
 
 # Prepare metrics recordings 
-fieldsname = ['frame']
+fieldsname = ['frame', 'mIoU', 'mF1', 'occup_IoU', 'occup_F1', 'Vehicle_IoU', 'Terrain_F1', 'Vehicle_F1', 'Pedestrian_IoU', 'Terrain_IoU', 'Pedestrian_F1', 'Terrain_CR', 'Vehicle_CR', 'occup_CR', 'Pedestrian_CR']
 for key in TFPN_LUT:
     fieldsname.append(f'occup_{key}')
 
@@ -300,6 +339,16 @@ for decision_maker in DECIS_LUT:
 # // processing setup
 pool = Pool(multiprocessing.cpu_count())
 
+def get_bbox_par(data, parallel = False):
+    if parallel:
+        return pool.map(get_bbox, data)
+    else:
+        out = []
+        for d in data:
+            out.append(get_bbox(d))
+        return out
+
+
 # Loop back of the evidential map
 loopback_evid = None
 
@@ -313,7 +362,7 @@ for frame in tqdm(range(args.start, args.end)):
         pass
     else:
         # from the dataset, retrieve the 2D bounding box
-        bboxes = pool.map(get_bbox, data)
+        bboxes = get_bbox_par(data)
         # create the evidential map + the mask for each agent
         mask_eveid_maps = [generate_evid_grid(agent_out=d) for d in bboxes]
     # datashape conversion
@@ -324,6 +373,10 @@ for frame in tqdm(range(args.start, args.end)):
 
     # get to know which cells are observed
     observed_zones = nObservMask(mask)
+    if args.save_img:
+        if not path.isdir(f'{SAVE_PATH}/CoopZone/'):
+            makedirs(f'{SAVE_PATH}/CoopZone/')    
+        plt.imsave(f'{SAVE_PATH}/CoopZone/{frame:06d}.png', observed_zones)
 
     
     
@@ -344,16 +397,21 @@ for frame in tqdm(range(args.start, args.end)):
             if not path.isdir(f'{SAVE_PATH}/GND/'):
                 makedirs(f'{SAVE_PATH}/GND/')    
             plt.imsave(f'{SAVE_PATH}/GND/{frame:06d}.png', mask_GND)
+            
 
 
         # merge the maps with joint probability
-        mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE)
-        # take the decision from probability to fixed semantic
+        with open(args.json_path) as json_file:
+            data = json.load(json_file)
+            FE = data['FE_mat']
+            json_file.close()
+            mean_map = mean_merger_fast(mask, gridsize=GRIDSIZE, FE=FE)
+            # take the decision from probability to fixed semantic
         sem_map_mean = cred2pign(mean_map, method=-1)
         # Save the value required for the metrics
         with open(f'{SAVE_PATH}/avg.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
-            writer.writerow(record(mask_GND, sem_map_mean, observed_zones, 2, GRIDSIZE, frame))
+            writer.writerow(record(mask_GND, sem_map_mean, observed_zones, args.cooplvl, GRIDSIZE, frame))
             recfile.close()
         
         # save the maps
@@ -362,9 +420,17 @@ for frame in tqdm(range(args.start, args.end)):
                 makedirs(f'{SAVE_PATH}/Mean/RAW/')
             if not path.isdir(f'{SAVE_PATH}/Mean/SEM/'):
                 makedirs(f'{SAVE_PATH}/Mean/SEM/')    
-            maprec = record(mask_GND, sem_map_mean, observed_zones, 2, GRIDSIZE, frame)
+            maprec = record(mask_GND, sem_map_mean, observed_zones, args.cooplvl, GRIDSIZE, frame)
             plt.imsave(f'{SAVE_PATH}/Mean/RAW/{frame:06d}.png', mean_map)
             plt.imsave(f'{SAVE_PATH}/Mean/SEM/{frame:06d}.png', sem_map_mean)
+            diff = np.zeros((GRIDSIZE, GRIDSIZE, 3), dtype=np.float)
+            diff[:, :, 0] = mask_GND
+            diff[:, :, 2] = sem_map_mean
+            # diff[:, :, 2] = np.absolute(mask_GND-sem_map_mean)
+            diff /= 255.0
+            if not path.isdir(f'{SAVE_PATH}/Mean/Dif/'):
+                makedirs(f'{SAVE_PATH}/Mean/Dif/')    
+            plt.imsave(f'{SAVE_PATH}/Mean/Dif/{frame:06d}.png', diff)
 
     evid_maps = list(evid_maps)
 
@@ -388,6 +454,8 @@ for frame in tqdm(range(args.start, args.end)):
         plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-v-p-t.png', evid_out[:,:,[1, 2, 4]])
         plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vp-vt-pt.png', evid_out[:,:,[3, 5, 6]])
         plt.imsave(f'{SAVE_PATH}/{ALGO}/RAW/{frame:06d}-vpt.png', evid_out[:,:,7])
+        
+        
 
     # Test every decision taking algorithm except average max
     for decision_maker in DECIS_LUT:
@@ -408,7 +476,7 @@ for frame in tqdm(range(args.start, args.end)):
 
         with open(f'{SAVE_PATH}/{ALGO}_{decision_maker}.csv', mode='a') as recfile:
             writer = csv.DictWriter(recfile, fieldnames=fieldsname)
-            writer.writerow(record(mask_GND, sem_map, observed_zones, 2, GRIDSIZE, frame))
+            writer.writerow(record(mask_GND, sem_map, observed_zones, args.cooplvl, GRIDSIZE, frame))
             recfile.close()
 
         # Save the semantic map
@@ -416,6 +484,15 @@ for frame in tqdm(range(args.start, args.end)):
             if not path.isdir(f'{SAVE_PATH}/{ALGO}/{decision_maker}/'):
                 makedirs(f'{SAVE_PATH}/{ALGO}/{decision_maker}/')
             plt.imsave(f'{SAVE_PATH}/{ALGO}/{decision_maker}/{frame:06d}.png', sem_map)
+            diff = np.zeros((GRIDSIZE, GRIDSIZE, 3), dtype=np.float)
+            diff[:, :, 0] = mask_GND
+            diff[:, :, 2] = sem_map
+            # diff[:, :, 2] = np.absolute(mask_GND-sem_map)
+            diff /= 255.0
+            if not path.isdir(f'{SAVE_PATH}/{ALGO}/Dif/'):
+                makedirs(f'{SAVE_PATH}/{ALGO}/Dif/')    
+            plt.imsave(f'{SAVE_PATH}/{ALGO}/Dif/{frame:06d}.png', diff)
+
 
     # Manage the GUI
     if args.gui:

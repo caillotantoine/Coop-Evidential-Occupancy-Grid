@@ -2,7 +2,7 @@ from numpy import NaN
 import pandas as pd
 import os
 
-DIR_NAMES = ['/home/caillot/Desktop/Output_Algo/perfect_full_testBBA15']
+DIR_NAMES = ['/home/caillot/Desktop/Output_Algo/perfect_full_testBBA16']
 # DIR_NAMES = [dir for dir in os.walk(".")][0][1]
 FILENAMES = ['avg', 'Conjunctive_BBA', 'Conjunctive_Bel', 'Conjunctive_BetP', 'Conjunctive_Pl', 
              'Dempster_BBA', 'Dempster_Bel', 'Dempster_BetP', 'Dempster_Pl', 
@@ -86,5 +86,5 @@ for dir in DIR_NAMES:
     df.style.to_excel(f'{dir}/F1.xlsx')
 
 df = pd.DataFrame(CRs)
-df.style.to_latex(buf=f'CR.tex', caption='CR for each fusion and decision methods')
-df.style.to_excel(f'CR.xlsx')
+df.style.to_latex(buf=f'{dir}/CR.tex', caption='CR for each fusion and decision methods')
+df.style.to_excel(f'{dir}/CR.xlsx')
