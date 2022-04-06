@@ -1,133 +1,34 @@
-from copy import deepcopy
-import ctypes
 import multiprocessing
-from turtle import color
-from joblib import parallel_backend
 import matplotlib
 import numpy as np
-from torch import dtype
-from agent import Agent
-from vector import vec2, vec3, vec4
-from Tmat import TMat
-from bbox import Bbox2D, Bbox3D
+from utils.agent import Agent
+from utils.vector import vec2, vec3, vec4
+from utils.Tmat import TMat
+
 from tqdm import tqdm
-from plucker import plkrPlane
-from projector import project_BBox2DOnPlane
+from utils.plucker import plkrPlane
+from utils.projector import project_BBox2DOnPlane
 import json
 from typing import List, Tuple
-from EGG import EGG
 from ctypes import *
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
-from merger import mean_merger, mean_merger_fast, DST_merger
-from decision import cred2pign
+from cwrap.merger import mean_merger, mean_merger_fast, DST_merger
+from cwrap.decision import cred2pign
 import cv2 as cv
-from metrics import TFPN, toOccup
+from cwrap.metrics import TFPN, toOccup
 import csv
-import sys
-import argparse
 from os import path, makedirs 
+from utils.metrics import *
+from utils.global_var import *
+from agents2maps import generate_evid_grid
 
-import rasterizer
-
-# Initial map descriptors
-MAPSIZE = 120.0
-STEPGRID = 5
-GRIDSIZE = int(MAPSIZE) * STEPGRID
-
-# Look up tables
-FUS_LUT = {'Dempster': 0, 'Conjunctive': 1, 'Disjunctive': 2}
-LABEL_LUT = {'Vehicle': int('0b01000000', 2), 'Pedestrian': int('0b10000000', 2), 'Terrain': int('0b00000010', 2)}
-DECIS_LUT = {'Avg_Max': -1, 'BetP': 0, 'Bel': 1, 'Pl': 2, 'BBA': 3}
-TFPN_LUT = {'TP': 0, 'TN': 1, 'FP': 2, 'FN': 3}
-
-
-# Manage the arguments
-argparser = argparse.ArgumentParser(description=__doc__)
-argparser.add_argument(
-    '--algo',
-    metavar='A',
-    default='Dempster',
-    help='Choose between Dempster, Conjunctive and Disjunctive (default Dempster).')
-argparser.add_argument(
-    '--mean',
-    metavar='M',
-    type=bool,
-    default=True,
-    help='Compute the mean (default False).')
-argparser.add_argument(
-    '--gui',
-    metavar='G',
-    type=bool,
-    default=False,
-    help='Show the GUI (default False).')
-argparser.add_argument(
-    '--save_img',
-    type=bool,
-    default=True,
-    help='Save maps as images (default False).')
-argparser.add_argument(
-    '--loopback_evid',
-    type=bool,
-    default=False,
-    help='Loop back the t-1 evidential map as an entry of the agents (default False).')
-argparser.add_argument(
-    '--start',
-    metavar='S',
-    type=int,
-    default=130, #10
-    help='Starting point in the dataset (default 10).')
-argparser.add_argument(
-    '--pdilate',
-    type=int,
-    default=-1, #10
-    help='Pedestrian Dilation Factor. -1: Off, Choose a value between 0 and 5. (default -1)')
-argparser.add_argument(
-    '--cooplvl',
-    type=int,
-    default=2, #10
-    help='Number of observation to be a valid measure. -1: All, Choose a value between 0 and N users. (default 2)')
-argparser.add_argument(
-    '--gdilate',
-    type=int,
-    default=-1, #10
-    help='Dilation Factor for every object at mask level. -1: Off, Choose a value between 0 and 5. (default -1)')
-argparser.add_argument(
-    '--end',
-    metavar='E',
-    type=int,
-    default=160,
-    help='Ending point in the dataset (default 500).')
-argparser.add_argument(
-    '--dataset_path',
-    default='/home/caillot/Documents/Dataset/CARLA_Dataset_intersec_dense',
-    help='Path of the dataset.')
-argparser.add_argument(
-    '--save_path',
-    default='/home/caillot/Documents/output_algo/',
-    help='Saving path.')
-
-argparser.add_argument(
-    '--json_path',
-    default='./standalone_project/full_project/configs/config_perfect_full_testBBA15.json',
-    help='Configuration json file path.')
-
-args = argparser.parse_args()
-print(args)
-
-SAVE_PATH = args.save_path
-CPT_MEAN = args.mean
-ALGO = args.algo
-ALGOID = FUS_LUT[ALGO]
-dataset_path:str = args.dataset_path
 
 if args.gui:
     fig, axes = plt.subplots(2, 3)
 
 if not path.isdir(SAVE_PATH):
     makedirs(SAVE_PATH)
-
-ANTOINE_M = False
 
 # for parallel processing. 
 # depackage the data to fit the classical argument disposition.
@@ -138,138 +39,6 @@ def get_bbox(data):
 def get_pred(data):
     agent, frame = data
     return agent.get_pred(frame=frame)
-
-
-
-# Generate the local evidential map from one agent
-def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, mapcenter:vec2 = vec2(x=0.0, y=0.0), agent_3D:List[Bbox3D] = None, antoine=False):
-
-    egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE)) # create an Evidential Grid Generator
-    mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8) # empty mask map
-
-    if agent_out != None:
-        # Extract 2D footprints and the label from 2d bounding box of the dataset
-        eggout = egg.projector_resterizer(agent_out, confjsonpath=args.json_path)
-
-        # Extract the 2D footprints 
-        fp_poly = np.array([np.array([(v.get().T)[0] for v in poly], dtype=np.float32) for (poly, _) in eggout])
-
-        # Extract the labels
-        fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 3 if label == 'terrain' else 0 for (_, label) in eggout], dtype=
-        np.int32)
-
-        # Rasterize the 2D footprints and create a mask
-        rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, mapcenter, MAPSIZE, GRIDSIZE)
-
-        # Dilate everything on teh mask
-        if args.gdilate >= 0:
-            dilatation_size = args.gdilate
-            element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2 * dilatation_size + 1, 2 * dilatation_size + 1), (dilatation_size, dilatation_size))
-            for o in [64, 128]:
-                obj_mask = np.bitwise_and(mask, o, dtype=np.uint8)
-                dil_ped_mask = cv.dilate(obj_mask, element)
-                mask = np.where(dil_ped_mask == o, dil_ped_mask, mask)
-
-
-    elif agent_3D != None:
-        # TO DO : Treating 3D bounding box
-        mask = np.where(mask == 0, 2, mask)
-        for agent in agent_3D:
-            bboxsize = agent.get_size()
-            label = agent.get_label()
-            poseT = agent.get_TPose()
-            
-            bin_mask = [np.array([0.5, 0.5, 0.0, 1.0]), np.array([0.5, -0.5, 0.0, 1.0]), np.array([-0.5, -0.5, 0.0, 1.0]), np.array([-0.5, 0.5, 0.0, 1.0])]
-            
-            centered_fps = [(bboxsize.vec4().get().T * m).T for m in bin_mask]
-
-            fps = [poseT @ v for v in centered_fps]
-            fps2 = [np.array([[v[0]-mapcenter.x(), v[1]-mapcenter.y(), 0.0, 1.0]]).T for v in fps]
-            if antoine:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps2])
-            else:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps2])
-            
-            
-            cv.fillPoly(mask, pts=[fps_pix], color=(int('0b01000000', 2) if label == 'vehicle' else int('0b10000000', 2)))
-
-    else: 
-        raise NameError("Both agent_out and agent_3D are set to None. Assign a value to at least one of them.")
-        
-    # define the number of focal elements
-    nFE = 8
-    # grab the focal elements from a json file
-    with open(args.json_path) as json_file:
-        data = json.load(json_file)
-        FE = data['FE_mat']
-        json_file.close()
-
-    # example of focal elements
-    # #      Ø    V    P    VP   T    VT   PT   VPT
-    # FE = [[0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.9], # VPT
-    #     [0.1, 0.6, 0.0, 0.1, 0.0, 0.1, 0.0, 0.1], # V
-    #     [0.1, 0.0, 0.6, 0.1, 0.0, 0.0, 0.1, 0.1], # P
-    #     [0.1, 0.0, 0.0, 0.0, 0.6, 0.1, 0.1, 0.1]] # T
-
-    # convert the focal element list as nparray
-    FE = np.array(FE, dtype=np.float32)  
-
-    # create an empty evidential map with the right size   
-    evid_map = np.zeros(shape=(GRIDSIZE, GRIDSIZE, nFE), dtype=np.float32)
-
-    # from the masks, create evidential maps
-    rasterizer.apply_BBA(nFE, GRIDSIZE, FE, mask, evid_map)
-
-    # return the masks (for averaging method) and the evidential maps
-    return (mask, evid_map)
-
-
-def IoU(TP:int, FP:int, FN:int) -> float:
-    try:
-        return (float(TP) / float(TP + FP + FN)) * 100.0
-    except ZeroDivisionError:
-        return np.NaN
-
-def F1(TP:int, FP:int, FN:int) -> float:
-    try:
-        return (float(TP) / (float(TP) + (float(FP + FN) / 2.0))) * 100.0
-    except ZeroDivisionError:
-        return np.NaN
-
-def CR(TP:int, TN:int, FP:int, FN:int) -> float:
-    try:
-        return (float(TP+TN) / float(TP+TN+FP+FN)) * 100.0
-    except ZeroDivisionError:
-        return np.NaN
-
-# get the required value to compute the metrics
-def record(sem_gnd:np.ndarray, sem_test:np.ndarray, zones:np.ndarray, coop_lvl:int, gridsize:int, frame:int):
-    occ_gnd = toOccup(sem_gnd, gridsize)
-    occ_test = toOccup(sem_test, gridsize)
-
-    outs = {'frame': frame}
-    for key in TFPN_LUT:
-        outs[f'occup_{key}'] = TFPN(occ_gnd, occ_test, zones, coop_lvl, gridsize, TFPN_LUT[key], 0)
-    outs[f'occup_IoU'] = IoU(outs[f'occup_TP'], outs[f'occup_FP'], outs[f'occup_FN'])
-    outs[f'occup_F1'] = F1(outs[f'occup_TP'], outs[f'occup_FP'], outs[f'occup_FN'])
-    outs[f'occup_CR'] = CR(outs[f'occup_TP'], outs[f'occup_TN'], outs[f'occup_FP'], outs[f'occup_FN'])
-
-    mIoU = 0.0
-    mF1 = 0.0
-    for keylab in LABEL_LUT:
-        for key_tfpn in TFPN_LUT:
-            outs[f'{keylab}_{key_tfpn}'] = TFPN(sem_gnd, sem_test, zones, coop_lvl, gridsize, TFPN_LUT[key_tfpn], LABEL_LUT[keylab])
-        
-        outs[f'{keylab}_IoU'] = IoU(outs[f'{keylab}_TP'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
-        outs[f'{keylab}_F1'] = F1(outs[f'{keylab}_TP'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
-        outs[f'{keylab}_CR'] = CR(outs[f'{keylab}_TP'], outs[f'{keylab}_TN'], outs[f'{keylab}_FP'], outs[f'{keylab}_FN'])
-        mIoU += outs[f'{keylab}_IoU']
-        mF1 += outs[f'{keylab}_F1']
-    outs[f'mIoU'] = mIoU / len(LABEL_LUT)
-    outs[f'mF1'] = mF1 / len(LABEL_LUT)
-
-    return outs
-
 
 # give the numlber of observation per cells
 def nObservMask(masks_in:List[np.ndarray]) -> np.ndarray:
@@ -371,14 +140,10 @@ for frame in tqdm(range(args.start, args.end)):
 
     # Every agent + given frame ID
     data = [(agent, frame) for agent in agents]
-    if ANTOINE_M:
-        # TODO
-        pass
-    else:
-        # from the dataset, retrieve the 2D bounding box
-        bboxes = get_bbox_par(data)
-        # create the evidential map + the mask for each agent
-        mask_eveid_maps = [generate_evid_grid(agent_out=d, mapcenter=scene_center) for d in bboxes]
+    # from the dataset, retrieve the 2D bounding box
+    bboxes = get_bbox_par(data)
+    # create the evidential map + the mask for each agent
+    mask_eveid_maps = [generate_evid_grid(agent_out=d, mapcenter=scene_center) for d in bboxes]
     # datashape conversion
     # [(mask, evid_map)] -> [mask], [evid_maps]
     mask, evid_maps = zip(*mask_eveid_maps)
