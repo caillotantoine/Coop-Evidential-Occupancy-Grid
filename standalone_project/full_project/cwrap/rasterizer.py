@@ -1,7 +1,7 @@
 import numpy as np
 from ctypes import *
 
-from standalone_project.full_project.vector import vec2
+from utils.vector import vec2
 
 rasterizer = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
 rasterizer.test_read_write.argtypes = [c_int,

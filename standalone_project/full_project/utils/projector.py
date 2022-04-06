@@ -2,13 +2,13 @@ import numpy as np
 from numpy.core.fromnumeric import size
 from numpy.core.numeric import moveaxis
 from scipy.spatial import transform
-from vector import *
-from bbox import *
-from Tmat import TMat
+from utils.vector import *
+from utils.bbox import *
+from utils.Tmat import TMat
 import cv2 as cv
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from plucker import plkrLine, plkrPlane
+from utils.plucker import plkrLine, plkrPlane
 from typing import Tuple, List
 
 import open3d as o3d

@@ -1,15 +1,15 @@
 import json
 from os import path, symlink
 import numpy as np
-from Tmat import TMat
-from bbox import Bbox2D, Bbox3D
-from vector import vec2, vec3, vec4
+from utils.Tmat import TMat
+from utils.bbox import Bbox2D, Bbox3D
+from utils.vector import vec2, vec3, vec4
 from typing import List, Tuple
 import cv2 as cv
 from tqdm import tqdm
 
 
-import projector as prj
+import standalone_project.full_project.utils.projector as prj
 import matplotlib.pyplot as plt
 
 class Agent:

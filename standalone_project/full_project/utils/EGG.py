@@ -1,10 +1,10 @@
 from typing import Tuple, List
-from vector import vec2
-from Tmat import TMat
-from bbox import Bbox2D
+from utils.vector import vec2
+from utils.Tmat import TMat
+from utils.bbox import Bbox2D
 import numpy as np
-from projector import project_BBox2DOnPlane
-from plucker import plkrPlane
+from utils.projector import project_BBox2DOnPlane
+from utils.plucker import plkrPlane
 from ctypes import *
 from scipy.spatial.transform import Rotation as R
 import json
@@ -42,34 +42,13 @@ class EGG:
                 noiseR = np.random.normal(loc=r_euler, scale=[noiseFigure['rot_err']['x'], noiseFigure['rot_err']['y'], noiseFigure['rot_err']['z']])
                 newT.tmat[:3, :3] = R.from_euler('xyz', noiseR).as_matrix()
                 newT.tmat[:3, 3] = noiseT
-        
-        # print(newT)
 
         for bbox in bbox_list:
             # project a bbox as a footprint
-            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00}) 
-
-            # get the footprint vertex on the map
-            # useless? 
-            #coords.append(np.array([(v.get().T)[0] for v in fp]))
-
-            # get the labels
-            # useless? 
-            #labels.append(bbox.label)
+            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00})
 
             # pack everything
             list_fp.extend(fp)
 
-
-        # coords = np.array(coords)
-        # labels = np.array([1 if l == "vehicle" else 2 for l in labels])
-        # print(coords)
-        # print(labels)
-
         return list_fp
-
-
-# if __name__ == "__main__":
-    # lib = cdll.LoadLibrary('./standalone_project/full_project/src_c/rasterizer.so')
-    # lib.bonjour()
 

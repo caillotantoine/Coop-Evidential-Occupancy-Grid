@@ -52,7 +52,7 @@ class TMat:
         self.tmat = np.linalg.inv(self.tmat)
 
     def get_translation(self):
-        from vector import vec4
+        from utils.vector import vec4
         out = vec4(0, 0, 0)
         out.set(self.tmat[:4, 3])
         return out
@@ -76,8 +76,8 @@ class TMat:
         return out
 
     def __mul__(self, other):
-        from vector import vec4
-        from bbox import Bbox3D
+        from utils.vector import vec4
+        from utils.bbox import Bbox3D
         if type(other) == int or type(other) == float:
             out = vec4(0, 0, 0)
             res = self.tmat * other
