@@ -100,7 +100,7 @@ argparser.add_argument(
     help='Ending point in the dataset (default 500).')
 argparser.add_argument(
     '--dataset_path',
-    default='/home/caillot/Documents/Dataset/CARLA_Dataset_B',
+    default='/home/caillot/Documents/Dataset/CARLA_Dataset_intersec_dense',
     help='Path of the dataset.')
 argparser.add_argument(
     '--save_path',
@@ -133,7 +133,7 @@ ANTOINE_M = False
 # depackage the data to fit the classical argument disposition.
 def get_bbox(data):
     agent, frame = data
-    return agent.get_visible_bbox(frame=frame, plot=None)
+    return agent.get_visible_bbox(frame=frame, plot=None) # Set plot to plt to show the images with the bounding boxes drawn.
 
 def get_pred(data):
     agent, frame = data
@@ -142,7 +142,7 @@ def get_pred(data):
 
 
 # Generate the local evidential map from one agent
-def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, agent_3D:List[Bbox3D] = None, antoine=False):
+def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, mapcenter:vec2 = vec2(x=0.0, y=0.0), agent_3D:List[Bbox3D] = None, antoine=False):
 
     egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE)) # create an Evidential Grid Generator
     mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8) # empty mask map
@@ -159,7 +159,7 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
         np.int32)
 
         # Rasterize the 2D footprints and create a mask
-        rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, MAPSIZE, GRIDSIZE)
+        rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, mapcenter, MAPSIZE, GRIDSIZE)
 
         # Dilate everything on teh mask
         if args.gdilate >= 0:
@@ -184,10 +184,11 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ag
             centered_fps = [(bboxsize.vec4().get().T * m).T for m in bin_mask]
 
             fps = [poseT @ v for v in centered_fps]
+            fps2 = [np.array([[v[0]-mapcenter.x(), v[1]-mapcenter.y(), 0.0, 1.0]]).T for v in fps]
             if antoine:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps])
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][[0, 2]], dtype=int) for v in fps2])
             else:
-                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps])
+                fps_pix = np.array([np.array((((v * STEPGRID) + (GRIDSIZE / 2)).T)[0][:2], dtype=int) for v in fps2])
             
             
             cv.fillPoly(mask, pts=[fps_pix], color=(int('0b01000000', 2) if label == 'vehicle' else int('0b10000000', 2)))
@@ -302,9 +303,22 @@ with open(args.json_path) as json_file:
         agents = [agents[i] for i in idx2read]
 
 
-# Print aquired active agents
+# Print aquired active agents & compute scene center from infrastructures' poses
+iPose:List[TMat] = []
 for idx, agent in enumerate(agents):
     print(f"{idx} : \t{agent}")
+    if agent.label == "infrastructure":
+        p = agent.get_state(args.start).sensorTPoses[0].get_translation()
+        print(p)
+        print(p.vec3().vec2())
+        iPose.append(p.vec3().vec2())
+
+sum:vec2 = vec2(0.0, 0.0)
+for p in iPose:
+    sum += p
+scene_center = sum / len(iPose)
+print(f"Scene center : {scene_center}")
+
 
 # Prepare metrics recordings 
 fieldsname = ['frame', 'mIoU', 'mF1', 'occup_IoU', 'occup_F1', 'Vehicle_IoU', 'Terrain_F1', 'Vehicle_F1', 'Pedestrian_IoU', 'Terrain_IoU', 'Pedestrian_F1', 'Terrain_CR', 'Vehicle_CR', 'occup_CR', 'Pedestrian_CR']
@@ -364,7 +378,7 @@ for frame in tqdm(range(args.start, args.end)):
         # from the dataset, retrieve the 2D bounding box
         bboxes = get_bbox_par(data)
         # create the evidential map + the mask for each agent
-        mask_eveid_maps = [generate_evid_grid(agent_out=d) for d in bboxes]
+        mask_eveid_maps = [generate_evid_grid(agent_out=d, mapcenter=scene_center) for d in bboxes]
     # datashape conversion
     # [(mask, evid_map)] -> [mask], [evid_maps]
     mask, evid_maps = zip(*mask_eveid_maps)
@@ -382,7 +396,7 @@ for frame in tqdm(range(args.start, args.end)):
     
     # with every agent info, create the ground truth map
     gnd_agent = [agent.get_state(frame).get_bbox3d() for agent in agents2gndtruth]
-    mask_eveid_maps_GND = generate_evid_grid(agent_3D=gnd_agent)
+    mask_eveid_maps_GND = generate_evid_grid(agent_3D=gnd_agent, mapcenter=scene_center)
     (mask_GND, evid_maps_GND) = mask_eveid_maps_GND
 
     

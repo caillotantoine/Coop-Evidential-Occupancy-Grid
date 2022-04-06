@@ -18,15 +18,15 @@
 
 
 void bonjour_cpp();
-void projector_cpp(int len, int* labels, float* fp_vec, unsigned char* map, float mapsize, int gridsize);
+void projector_cpp(int len, int* labels, float* fp_vec, unsigned char* map, float ox, float oy, float mapsize, int gridsize);
 unsigned char* test_read_write_cpp (int len, float *fp_poly, int *label, unsigned char *out);
 void apply_BBA_cpp(const int nFE, const int gridsize, float *FE, unsigned char *map, float *evid_map, bool CUDA);
 
 extern "C" {
     void bonjour()
         {bonjour_cpp();}
-    void projector(int len, int* labels, float* fp_vec, unsigned char* map, float mapsize, int gridsize) 
-        {projector_cpp(len, labels, fp_vec, map, mapsize, gridsize);}
+    void projector(int len, int* labels, float* fp_vec, unsigned char* map, float ox, float oy, float mapsize, int gridsize) 
+        {projector_cpp(len, labels, fp_vec, map, ox, oy, mapsize, gridsize);}
     unsigned char* test_read_write (int len, float *fp_poly, int *label, unsigned char *out)
         {return test_read_write_cpp (len, fp_poly, label, out);}
     void apply_BBA(const int nFE, const int gridsize, float *FE, unsigned char *map, float *evid_map)
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     }
     // printf("test nvcc!!!!!\n");
     // ellipse(map, Point(GRIDSIZE/4, GRIDSIZE/4), Size(GRIDSIZE/4, GRIDSIZE/4), 0, 0, 360, 0xff, 2, 8);
-    projector_cpp(2, label, (float*) fp_vec, map.ptr(), MAPSIZE, GRIDSIZE);
+    projector_cpp(2, label, (float*) fp_vec, map.ptr(),0.0, 0.0, MAPSIZE, GRIDSIZE);
     apply_BBA_cpp(nFE, GRIDSIZE, (float *) FE, map.ptr(), (float *) evidmap.ptr(), false);
 
     imshow("Test map display", map);
@@ -78,7 +78,7 @@ void bonjour_cpp()
     printf("Bonjour!!!\n");
 }
 
-void projector_cpp(const int len, int* labels, float* fp_vec, unsigned char* map, float mapsize, int gridsize)
+void projector_cpp(const int len, int* labels, float* fp_vec, unsigned char* map, float ox, float oy, float mapsize, int gridsize)
 {
     int i, j;
     // Mat n_map = Mat(gridsize, gridsize, CV_8U, map);
@@ -99,8 +99,8 @@ void projector_cpp(const int len, int* labels, float* fp_vec, unsigned char* map
             // printf("Label %d: ", labels[i]);
             addr_x = (fp_vec + 8*i + 2*j);
             addr_y = (fp_vec + 8*i + 2*j + 1);
-            fx = *addr_x;
-            fy = *addr_y;
+            fx = *addr_x - ox;
+            fy = *addr_y - oy;
             x = ((int) (fx / stepgrid)) + (gridsize / 2);
             y = ((int) (fy / stepgrid)) + (gridsize / 2);
             // printf("<%3.2f; %3.2f> \t <%d; %d> \t(%d, %d) \n", fx, fy, x, y, addr_x, addr_y);
@@ -142,7 +142,7 @@ unsigned char* test_read_write_cpp (int len, float *fp_poly, int *label, unsigne
     {
         printf("%03d: \t%d\n", idx, label[idx]);
     }
-    projector_cpp(len, label, fp_poly, map.ptr(), MAPSIZE, GRIDSIZE);
+    projector_cpp(len, label, fp_poly, map.ptr(), 0.0, 0.0, MAPSIZE, GRIDSIZE);
 
     // imshow("Test map display", map);
     // waitKey(0);
