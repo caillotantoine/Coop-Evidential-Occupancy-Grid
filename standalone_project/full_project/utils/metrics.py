@@ -1,6 +1,9 @@
+from os import makedirs, path
+import matplotlib.pyplot as plt
 import numpy as np
 from cwrap.metrics import TFPN, toOccup
 from utils.global_var import *
+from typing import List
 
 def IoU(TP:int, FP:int, FN:int) -> float:
     try:
@@ -47,3 +50,24 @@ def record(sem_gnd:np.ndarray, sem_test:np.ndarray, zones:np.ndarray, coop_lvl:i
     outs[f'mF1'] = mF1 / len(LABEL_LUT)
 
     return outs
+
+# give the numlber of observation per cells
+def nObservMask(masks_in:List[np.ndarray]) -> np.ndarray:
+    maskout = np.zeros(shape=masks_in[0].shape)
+    for mask in masks_in:
+        maskout += np.where(mask > 0, 1, 0)
+    return maskout.astype(np.uint8)
+
+def save_map(dir:str, filename:str, map_in:np.ndarray, save:bool = True):
+    if not save:
+        return
+    if not path.isdir(dir):
+        makedirs(dir)    
+    plt.imsave(f'{dir}/{filename}', map_in)
+
+def create_diffmap(mapGND:np.ndarray, mapin:np.ndarray) -> np.ndarray:
+    diff = np.zeros((GRIDSIZE, GRIDSIZE, 3), dtype=np.float)
+    diff[:, :, 0] = mapGND
+    diff[:, :, 2] = mapin
+    diff /= 255.0
+    return diff
