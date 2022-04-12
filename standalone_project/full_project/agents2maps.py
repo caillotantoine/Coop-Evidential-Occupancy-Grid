@@ -3,7 +3,7 @@ from utils.Tmat import TMat
 from standalone_project.full_project.utils.EGG import EGG
 from typing import List, Tuple
 from utils.bbox import Bbox2D, Bbox3D
-from utils.vector import vec2
+from utils.vector import vec2, vec4
 import numpy as np
 import cwrap.rasterizer as rasterizer
 import cv2 as cv
@@ -25,6 +25,8 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ma
     egg = EGG(mapsize=MAPSIZE, gridsize=(GRIDSIZE)) # create an Evidential Grid Generator
     mask = np.zeros(shape=(GRIDSIZE, GRIDSIZE), dtype=np.uint8) # empty mask map
 
+    polygons:List[Tuple[np.ndarray, str]] = []
+
     if agent_out != None:
         # Extract 2D footprints and the label from 2d bounding box of the dataset
         eggout = egg.projector_resterizer(agent_out, confjsonpath=args.json_path)
@@ -35,6 +37,10 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ma
         # Extract the labels
         fp_label = np.array([1 if label == 'vehicle' else 2 if label == 'pedestrian' else 3 if label == 'terrain' else 0 for (_, label) in eggout], dtype=
         np.int32)
+
+        polygons = [([vec4(x=v[0], y=v[1], z=0) for v in fp_poly[i]], label) for i, label in enumerate(list(fp_label))] 
+
+
 
         # Rasterize the 2D footprints and create a mask
         rasterizer.projector(len(fp_label), fp_label, fp_poly, mask, mapcenter, MAPSIZE, GRIDSIZE)
@@ -96,4 +102,4 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ma
     rasterizer.apply_BBA(nFE, GRIDSIZE, FE, mask, evid_map)
 
     # return the masks (for averaging method) and the evidential maps
-    return (mask, evid_map)
+    return (mask, evid_map, polygons)

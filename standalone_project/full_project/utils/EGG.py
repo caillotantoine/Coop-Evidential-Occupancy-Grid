@@ -19,7 +19,7 @@ class EGG:
         self.cellsize = mapsize / float(gridsize)
 
     def projector_resterizer(self, agent_out:Tuple[List[Bbox2D], TMat, TMat, str], confjsonpath=None):
-        (bbox_list, kmat, camT, label) = agent_out
+        (bbox_list, kmat, camT, label, _) = agent_out
         list_fp:List[Tuple[List[vec2], str]] = []
         gndPlane = plkrPlane()
 

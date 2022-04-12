@@ -143,7 +143,7 @@ class Agent:
 
 
 
-    def get_visible_bbox(self, frame:int, plot:plt = None) -> Tuple[List[Bbox2D], TMat, TMat]:
+    def get_visible_bbox(self, frame:int, plot:plt = None, drawBBOXonImg=False) -> Tuple[List[Bbox2D], TMat, TMat]:
         self.get_state(frame)
         if self.label == "pedestrian":
             raise Exception("Pedestrian do not have sensors.")
@@ -182,9 +182,9 @@ class Agent:
             bbox2.insert(0, camBBox)
             # print(bbox2)
             
+            img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
 
-            if plot is not None:
-                img = cv.imread(self.mypath+f'camera_rgb/{frame:06d}.png')
+            if drawBBOXonImg:
                 color = (0, 255, 0)
                 thickness = 2
                 for box in bbox2:
@@ -200,12 +200,13 @@ class Agent:
                     # print(pts)
                     for i in range(len(pts)):
                         img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
-                    
+
+            if plot is not None:                    
                 plot.imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
                 plot.draw()
                 plt.pause(0.001)
 
-            return (bbox2, k_mat, camPose, self.label)
+            return (bbox2, k_mat, camPose, self.label, cv.cvtColor(img, cv.COLOR_BGR2RGB))
                 
 
 

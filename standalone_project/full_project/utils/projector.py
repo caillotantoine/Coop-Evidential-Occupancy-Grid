@@ -1,14 +1,13 @@
 import numpy as np
-from numpy.core.fromnumeric import size
-from numpy.core.numeric import moveaxis
-from scipy.spatial import transform
 from utils.vector import *
 from utils.bbox import *
 from utils.Tmat import TMat
+from utils.plucker import plkrLine, plkrPlane
+
 import cv2 as cv
+
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from utils.plucker import plkrLine, plkrPlane
 from typing import Tuple, List
 
 import open3d as o3d
@@ -16,7 +15,7 @@ import open3d as o3d
 def get_o3dgrid(map_size = 70):
     # Drawing the ground with a grid
     # Red for X
-    # Green for Y
+    # Green for Y  
     x_col = [0.5, 0.5, 0.5]
     y_col = [0.5, 0.5, 0.5]
     pointsX = []
@@ -100,7 +99,9 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
     posebbox = out_bbox.get_pose()
     sizebbox = out_bbox.get_size()
 
-    cropped_img = img[int(posebbox.y()):int(posebbox.y()+sizebbox.y()), int(posebbox.x()):int(posebbox.x()+sizebbox.x()), 2]
+    cropped_img = img[int(posebbox.y()):int(posebbox.y()+sizebbox.y()), 
+                      int(posebbox.x()):int(posebbox.x()+sizebbox.x()), 
+                      2]
     
     try:
         # vehicle : 10
@@ -117,7 +118,14 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
         return None
     return (out_bbox, pts_2d)
 
-def project_BBox2DOnPlane(plane:plkrPlane, bbox:Bbox2D, kMat:TMat, sensorT:TMat, fpSizeMax=None, vMat:TMat = None, vbbox3d:Bbox3D = None, debug = None) -> List[vec2]:
+def project_BBox2DOnPlane(plane:plkrPlane, 
+                          bbox:Bbox2D, 
+                          kMat:TMat, 
+                          sensorT:TMat, 
+                          fpSizeMax=None, 
+                          vMat:TMat = None, 
+                          vbbox3d:Bbox3D = None, 
+                          debug = None) -> List[vec2]:
     invK = deepcopy(kMat)
     invK.inv()
     # print(invK)

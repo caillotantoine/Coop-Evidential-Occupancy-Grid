@@ -17,7 +17,7 @@ argparser.add_argument(
     '--gui',
     metavar='G',
     type=bool,
-    default=False,
+    default=True,
     help='Show the GUI (default False).')
 argparser.add_argument(
     '--save_img',
