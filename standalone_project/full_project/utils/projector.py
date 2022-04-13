@@ -1,8 +1,8 @@
 import numpy as np
-from utils.vector import *
-from utils.bbox import *
-from utils.Tmat import TMat
-from utils.plucker import plkrLine, plkrPlane
+from .vector import *
+from .bbox import *
+from .Tmat import TMat
+from .plucker import plkrLine, plkrPlane
 
 import cv2 as cv
 
@@ -13,9 +13,10 @@ from typing import Tuple, List
 import open3d as o3d
 
 def get_o3dgrid(map_size = 70):
-    # Drawing the ground with a grid
-    # Red for X
-    # Green for Y  
+    """Drawing the ground with a grid. Red for X and Green for Y
+    Args:
+        map_size (int, optional): The size of the map. Defaults to 70.
+    """
     x_col = [0.5, 0.5, 0.5]
     y_col = [0.5, 0.5, 0.5]
     pointsX = []
@@ -54,6 +55,12 @@ def get_o3dgrid(map_size = 70):
     return [line_setX, line_setY]
 
 def getCwTc():
+    """
+    Get the transformation matrix from the camera to the world frame
+
+    Returns:
+        TMat: Transformation matrix from the camera to the world frame
+    """
     out = TMat()
     # matout = np.array([[0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
     matout = np.array([[0.0,   0.0,   1.0,   0.0,], [-1.0,   0.0,  0.0,   0.0,], [0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
@@ -61,6 +68,14 @@ def getCwTc():
     return out
 
 def load_k(path_k) -> TMat:
+    """Load the camera calibration matrix from a file
+    
+    Args:
+        path_k (str): Path to the file containing the camera calibration matrix
+
+    Returns:
+        TMat: The camera calibration matrix
+    """
     k = np.load(path_k)
     kmat = TMat()
     kmat4 = np.identity(4)
@@ -68,7 +83,45 @@ def load_k(path_k) -> TMat:
     kmat.set(kmat4)
     return kmat
 
+def project3Dpoint(point3D:vec4, kmat:TMat, Tcw:TMat) -> vec2:
+    """Project a 3D point into the image plane
+    
+    Args:
+        point3D (vec4): The 3D point to project
+        kmat (TMat): The camera calibration matrix
+        Tcw (TMat): The transformation matrix from the camera to the world frame
+
+    Returns:
+        vec2: The 2D point in the image plane
+
+    Exception:
+        ValueError: If the point is behind the camera
+    """
+    cwTc = getCwTc()
+    wTc:TMat = Tcw * cwTc
+    wTc.inv()
+
+    projPts = kmat * (wTc * point3D)
+    if projPts.z() <= 0:
+        raise ValueError("The point is behind the camera")
+    return ().vec3().nvec2()
+
+
 def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -> Tuple[Bbox2D, List[vec2]]:
+    """
+    Project a 3D bounding box to the image plane and filter out the points that are not in the image or occluded
+    
+    Args:
+        bbox (Bbox3D): The bounding box to project
+        vPose (TMat): The pose of the vehicle
+        k (TMat): The camera calibration matrix
+        sensorT (TMat): the pose of the sensor
+        img (np.array): The image to project the bounding box on
+        threashold (float, optional): The threshold for occlusion. Defaults to 0.3.
+
+    Returns:
+        Tuple[Bbox2D, List[vec2]]: The projected bounding box and the list of points that are not occluded
+    """
     out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.label)
     
     cwTc = getCwTc()
@@ -80,6 +133,12 @@ def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threash
     pts_cam:List[vec4] = [wTc * pt4 for pt4 in pts_w]
     pts_proj:List[vec4] = [k * pt4 for pt4 in pts_cam]
     pts_2d:List[vec2] = [pt3.nvec2() for pt3 in [pt4.vec3() for pt4 in pts_proj]]
+
+    try:
+        pts_2d2:List[vec2] = [project3Dpoint(pt4, k, vPose) for pt4 in pts_w]
+        A = pts_2d2
+    except ValueError:
+        pass
 
     for i in range(len(pts_2d)):
         if pts_proj[i].z() <= 0:
@@ -126,6 +185,23 @@ def project_BBox2DOnPlane(plane:plkrPlane,
                           vMat:TMat = None, 
                           vbbox3d:Bbox3D = None, 
                           debug = None) -> List[vec2]:
+
+    """
+    Project a 2D bounding box on a plane (typically, the ground plane)
+
+    Args:
+        plane (plkrPlane): The plane to project the bounding box on
+        bbox (Bbox2D): The bounding box to project
+        kMat (TMat): The camera calibration matrix
+        sensorT (TMat): The pose of the sensor
+        fpSizeMax (vec2, optional): The maximum size of the projected bounding box. If None, no limit are given. Defaults to None.
+        vMat (TMat, optional): The pose of the vehicle. If None, the vehicle is ignored. Defaults to None.
+        vbbox3d (Bbox3D, optional): The 3D bounding box of the vehicle. If None, the vehicle is placed at the origin Defaults to None.
+        debug (bool, optional): Display open3d window. Defaults to None.
+
+    Returns:
+        List[vec2]: The points of projected bounding box
+    """
     invK = deepcopy(kMat)
     invK.inv()
     # print(invK)

@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>projector API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>projector</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import numpy as np
+from utils.vector import *
+from utils.bbox import *
+from utils.Tmat import TMat
+from utils.plucker import plkrLine, plkrPlane
+
+import cv2 as cv
+
+from copy import deepcopy
+import matplotlib.pyplot as plt
+from typing import Tuple, List
+
+import open3d as o3d
+
+def get_o3dgrid(map_size = 70):
+    &#34;&#34;&#34;Drawing the ground with a grid. Red for X and Green for Y&#34;&#34;&#34;
+    x_col = [0.5, 0.5, 0.5]
+    y_col = [0.5, 0.5, 0.5]
+    pointsX = []
+    pointsY = []
+    lineX = []
+    lineY = []
+
+    for i in range(-map_size, map_size, 1):
+        pointsX.append([i, -map_size, 0])
+        pointsX.append([i, map_size, 0])
+
+
+    for i in range(0, len(pointsX), 2):
+        lineX.append([i, i+1])
+
+    for i in range(-map_size, map_size, 1):
+        pointsY.append([-map_size, i, 0])
+        pointsY.append([map_size, i, 0])
+
+    for i in range(0, len(pointsX), 2):
+        lineY.append([i, i+1])
+
+    colorsX = [x_col for i in range(len(lineX))]
+    line_setX = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(pointsX),
+        lines=o3d.utility.Vector2iVector(lineX)
+    )
+    line_setX.colors = o3d.utility.Vector3dVector(colorsX)
+
+    colorsY = [y_col for i in range(len(lineY))]
+    line_setY = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(pointsY),
+        lines=o3d.utility.Vector2iVector(lineY)
+    )
+    line_setY.colors = o3d.utility.Vector3dVector(colorsY)
+    return [line_setX, line_setY]
+
+def getCwTc():
+    &#34;&#34;&#34;
+    Get the transformation matrix from the camera to the world frame
+
+    Returns:
+        TMat: Transformation matrix from the camera to the world frame
+    &#34;&#34;&#34;
+    out = TMat()
+    # matout = np.array([[0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
+    matout = np.array([[0.0,   0.0,   1.0,   0.0,], [-1.0,   0.0,  0.0,   0.0,], [0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
+    out.set(matout)
+    return out
+
+def load_k(path_k) -&gt; TMat:
+    &#34;&#34;&#34;Load the camera calibration matrix from a file
+    
+    Args:
+        path_k (str): Path to the file containing the camera calibration matrix
+
+    Returns:
+        TMat: The camera calibration matrix
+    &#34;&#34;&#34;
+    k = np.load(path_k)
+    kmat = TMat()
+    kmat4 = np.identity(4)
+    kmat4[:3, :3] = k
+    kmat.set(kmat4)
+    return kmat
+
+
+def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -&gt; Tuple[Bbox2D, List[vec2]]:
+    &#34;&#34;&#34;
+    Project a 3D bounding box to the image plane and filter out the points that are not in the image or occluded
+    
+    Args:
+        bbox (Bbox3D): The bounding box to project
+        vPose (TMat): The pose of the vehicle
+        k (TMat): The camera calibration matrix
+        sensorT (TMat): the pose of the sensor
+        img (np.array): The image to project the bounding box on
+        threashold (float, optional): The threshold for occlusion. Defaults to 0.3.
+
+    Returns:
+        Tuple[Bbox2D, List[vec2]]: The projected bounding box and the list of points that are not occluded
+    &#34;&#34;&#34;
+    out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.label)
+    
+    cwTc = getCwTc()
+    wTc = sensorT * cwTc
+    wTc.inv()
+
+    pts_c:List[vec4] = [pt3.vec4() for pt3 in bbox.get_pts()]
+    pts_w:List[vec4] = [vPose * pt4 for pt4 in pts_c]
+    pts_cam:List[vec4] = [wTc * pt4 for pt4 in pts_w]
+    pts_proj:List[vec4] = [k * pt4 for pt4 in pts_cam]
+    pts_2d:List[vec2] = [pt3.nvec2() for pt3 in [pt4.vec3() for pt4 in pts_proj]]
+
+    for i in range(len(pts_2d)):
+        if pts_proj[i].z() &lt;= 0:
+            return None
+
+    out_bbox.set_from_pts(pts_2d)
+
+    (h, w, c) = img.shape
+    center:vec2 = out_bbox.get_pose() + (out_bbox.get_size() / 2.0)
+    if not (center.x() &gt;= 0.0 and center.x() &lt;= w and center.y() &gt;= 0.0 and center.y() &lt;= h):
+        return None
+    #     pass
+    #     # return out_bbox
+    # else:
+    #     return None
+
+    posebbox = out_bbox.get_pose()
+    sizebbox = out_bbox.get_size()
+
+    cropped_img = img[int(posebbox.y()):int(posebbox.y()+sizebbox.y()), 
+                      int(posebbox.x()):int(posebbox.x()+sizebbox.x()), 
+                      2]
+    
+    try:
+        # vehicle : 10
+        # pedestrian : 4
+        todetect = 10 if bbox.get_label() == &#34;vehicle&#34; else 4
+        unique, counts = np.unique(cropped_img, return_counts=True)
+        pix = dict(zip(unique, counts))
+        N_detected = pix[todetect]
+        ratio = N_detected / cropped_img.size
+        # print(f&#39;In {cropped_img.size} pix, deteceted {pix} with {N_detected} of {bbox.get_label()} with a ratio of {ratio*100.0}%&#39;)
+    except:
+        return None
+    if ratio &lt;= threashold:
+        return None
+    return (out_bbox, pts_2d)
+
+def project_BBox2DOnPlane(plane:plkrPlane, 
+                          bbox:Bbox2D, 
+                          kMat:TMat, 
+                          sensorT:TMat, 
+                          fpSizeMax=None, 
+                          vMat:TMat = None, 
+                          vbbox3d:Bbox3D = None, 
+                          debug = None) -&gt; List[vec2]:
+
+    &#34;&#34;&#34;
+    Project a 2D bounding box on a plane (typically, the ground plane)
+
+    Args:
+        plane (plkrPlane): The plane to project the bounding box on
+        bbox (Bbox2D): The bounding box to project
+        kMat (TMat): The camera calibration matrix
+        sensorT (TMat): The pose of the sensor
+        fpSizeMax (vec2, optional): The maximum size of the projected bounding box. If None, no limit are given. Defaults to None.
+        vMat (TMat, optional): The pose of the vehicle. If None, the vehicle is ignored. Defaults to None.
+        vbbox3d (Bbox3D, optional): The 3D bounding box of the vehicle. If None, the vehicle is placed at the origin Defaults to None.
+        debug (bool, optional): Display open3d window. Defaults to None.
+
+    Returns:
+        List[vec2]: The points of projected bounding box
+    &#34;&#34;&#34;
+    invK = deepcopy(kMat)
+    invK.inv()
+    # print(invK)
+
+    cwTc = getCwTc()
+    wTcw = sensorT
+    wTc = wTcw * cwTc
+
+    bboxlabel = bbox.get_label()
+
+
+    pts4 = [pt2.vec4(z=1) for pt2 in bbox.get_pts()]
+    pts_ip_c = [((invK * p).vec3() * 120).vec4() for p in pts4]
+    pts_ip_c_ctrl = [invK * p for p in pts4]
+    pts_ip_cw = [(wTc * pt4) for pt4 in pts_ip_c]
+    pts_ip_cw_ctrl = [(wTc * pt4) for pt4 in pts_ip_c_ctrl]
+
+
+    out_pts:List[vec4] = []
+
+    for i, pt in enumerate(pts_ip_cw):
+        # check if the line points toward the sky.
+        if pt.z() &lt; pts_ip_cw_ctrl[i].z():
+            line = plkrLine(wTc.get_translation(), pts_ip_cw[i]) 
+            out_pts.append(plane.intersect(line))
+        
+        # if so, take the point outside the map and fix its height to 0
+        # Yes, this is a cheat trick.
+        else:
+            p = vec4(x=pt.x(), y=pt.y(), z=0)
+            out_pts.append(p)
+
+    # lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
+    # out_pts = [plane.intersect(line) for line in lines]
+    # Normalize the points to a correct position in the map
+    for i, pt in enumerate(out_pts):
+        pt.normalize()
+        if debug != None:
+            print(pt)
+    
+    #convert from vec4 to vec2
+    out_pts = [pt4.vec3() for pt4 in out_pts]
+    out_pts = [pt3.vec2() for pt3 in out_pts]
+
+    output:List[Tuple(List[vec2], str)] = []
+
+
+    # Reduce the footprint in function of the class
+    if fpSizeMax != None and bboxlabel in fpSizeMax:
+        sPos = sensorT.get_translation()
+        output.append((out_pts, &#39;unknown&#39;))
+        # get the closest point distance 
+        dmin = np.inf
+        for pt in out_pts:
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d &lt; dmin:
+                dmin = d
+
+        # get distance max in function of the class
+        dmax = dmin+fpSizeMax[bboxlabel]
+        
+        # crop the footprint
+        for i,pt in enumerate(out_pts):
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d &gt; dmax:
+                k = dmax / d
+                v = vec3(x=k*v.x(), y=k*v.y(), z=1)
+                vout = vec2(x=v.x()+sPos.x(), y=v.y()+sPos.y())
+                out_pts[i] = vout
+        output.append((out_pts, bboxlabel))
+    else:
+        output.append((out_pts, bboxlabel))
+
+
+    # if not in debug, break and return
+    if debug == None or debug == False:
+        return output
+
+
+    mesh_world = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera.transform(wTc.get())
+
+    mesh_ip_c = [o3d.geometry.TriangleMesh.create_sphere(radius=0.1) for pt in pts_ip_c]
+    for idx, mesh in enumerate(mesh_ip_c):
+        mesh.paint_uniform_color([0.1, 0.1, 0.8])
+        T = np.identity(4)
+        T[:3, 3] = np.transpose(pts_ip_c[idx].get())[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    
+    mesh_ip_cw = [o3d.geometry.TriangleMesh.create_sphere(radius=0.3) for pt in pts_ip_cw]
+    for idx, mesh in enumerate(mesh_ip_cw):
+        mesh.paint_uniform_color([0.1, 0.1, 1.0])
+        T = np.identity(4)
+        T[:3, 3] = np.transpose(pts_ip_cw[idx].get())[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    mesh_out_pts = [o3d.geometry.TriangleMesh.create_sphere(radius=0.5) for pt in out_pts]
+    for idx, mesh in enumerate(mesh_out_pts):
+        mesh.paint_uniform_color([0.8, 0.1, 0.1])
+        T = np.identity(4)
+        a = np.transpose(out_pts[idx].get())
+        T[:2, 3] = a[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    carMesh = None
+    if(vMat != None):
+        if(vbbox3d == None):
+            carMesh = o3d.geometry.TriangleMesh.create_sphere(radius=1)
+        else:
+            carMesh = o3d.geometry.TriangleMesh.create_box(width=vbbox3d.get_size().x(), height=vbbox3d.get_size().z(), depth=vbbox3d.get_size().y())
+            T = np.identity(4)
+            T[0, 3] = -vbbox3d.get_size().x()/2.0 + vbbox3d.get_pose().x()
+            T[1, 3] = -vbbox3d.get_size().y()/2.0 + vbbox3d.get_pose().y()
+            T[2, 3] = -vbbox3d.get_size().z()/2.0 + vbbox3d.get_pose().z()
+            carMesh.transform(T)
+    carMesh.transform(vMat.get())
+    carMesh.paint_uniform_color([0.0, 0.5, 0.1])
+
+    o3d.visualization.draw(get_o3dgrid() + [mesh_world, mesh_camera] + mesh_ip_c + mesh_ip_cw + [carMesh] + mesh_out_pts)
+    return out_pts
+
+
+if __name__ == &#39;__main__&#39;:
+    img_path = &#39;/home/caillot/Documents/Dataset/CARLA_Dataset_B/I000/camera_rgb/000072.png&#39;
+    bbox3d = Bbox3D(pose=vec3(0.0, 0.0, 0.76), size=vec3(4.553, 2.097, 1.767), label=&#34;vehicle&#34;)
+    k = load_k(&#39;/home/caillot/Documents/Dataset/CARLA_Dataset_B/I000/camera_rgb/cameraMatrix.npy&#39;)
+    print(k)
+
+    camtmat = [[-4.222195926217864e-08, -1.0, -2.032226348092081e-06, 0.0], [0.9659258723258972, -5.667619689120329e-07, 0.25881895422935486, 0.0], [-0.25881895422935486, -1.952052116394043e-06, 0.9659258723258972, 13.0], [0.0, 0.0, 0.0, 1.0]]
+    camtmat = np.array(camtmat)
+    wTcw = TMat()
+    wTcw.set(camtmat)
+
+    a= np.array([[0.06367591768503189, 0.9979698657989502, 0.0012183079961687326, 5.033266544342041], [-0.9979450106620789, 0.06368298083543777, -0.007091572042554617, 39.51407241821289], [-0.007154760882258415, -0.0007642419659532607, 0.9999741315841675, 0.006778659764677286], [0.0, 0.0, 0.0, 1.0]])
+    vMat = TMat()
+    vMat.set(a)
+    
+    wTcw.handinessLeft2Right()
+    vMat.handinessLeft2Right()
+        
+    img2 = cv.imread(f&#39;/home/caillot/Documents/Dataset/CARLA_Dataset_B/I000/camera_semantic_segmentation/000072.png&#39;)
+    # bbox = projector_filter(bbox3d, vMat, k, wTcw, img)
+    bbox = projector_filter(bbox3d, vMat, k, wTcw, img2, 0.2)
+
+    img = cv.imread(img_path)
+    color = (0, 255, 0)
+    thickness = 2
+
+    points = bbox.get_pts()
+    pts = [tuple(np.transpose(pt.get())[0].astype(int).tolist()) for pt in points]
+    print(pts)
+    for i in range(len(pts)):
+        img = cv.line(img, pts[i], pts[(i+1)%len(pts)], color, thickness)
+
+    cv.imshow(&#39;image&#39;,img)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
+
+    ground = plkrPlane()
+    
+    traces = project_BBox2DOnPlane(ground, bbox, k, wTcw, vMat=vMat, vbbox3d=bbox3d, fpSizeMax={&#39;vehicle&#39;: 6.00, &#39;pedestrian&#39;: 1.00}, debug=False)
+    for t in traces:
+        print(t)
+    
+    </code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="projector.getCwTc"><code class="name flex">
+<span>def <span class="ident">getCwTc</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the transformation matrix from the camera to the world frame</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>TMat</code></dt>
+<dd>Transformation matrix from the camera to the world frame</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getCwTc():
+    &#34;&#34;&#34;
+    Get the transformation matrix from the camera to the world frame
+
+    Returns:
+        TMat: Transformation matrix from the camera to the world frame
+    &#34;&#34;&#34;
+    out = TMat()
+    # matout = np.array([[0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,  -1.0,   0.0,], [1.0,   0.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
+    matout = np.array([[0.0,   0.0,   1.0,   0.0,], [-1.0,   0.0,  0.0,   0.0,], [0.0,   -1.0,   0.0,   0.0,], [0.0,   0.0,   0.0,   1.0,]])
+    out.set(matout)
+    return out</code></pre>
+</details>
+</dd>
+<dt id="projector.get_o3dgrid"><code class="name flex">
+<span>def <span class="ident">get_o3dgrid</span></span>(<span>map_size=70)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Drawing the ground with a grid. Red for X and Green for Y</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_o3dgrid(map_size = 70):
+    &#34;&#34;&#34;Drawing the ground with a grid. Red for X and Green for Y&#34;&#34;&#34;
+    x_col = [0.5, 0.5, 0.5]
+    y_col = [0.5, 0.5, 0.5]
+    pointsX = []
+    pointsY = []
+    lineX = []
+    lineY = []
+
+    for i in range(-map_size, map_size, 1):
+        pointsX.append([i, -map_size, 0])
+        pointsX.append([i, map_size, 0])
+
+
+    for i in range(0, len(pointsX), 2):
+        lineX.append([i, i+1])
+
+    for i in range(-map_size, map_size, 1):
+        pointsY.append([-map_size, i, 0])
+        pointsY.append([map_size, i, 0])
+
+    for i in range(0, len(pointsX), 2):
+        lineY.append([i, i+1])
+
+    colorsX = [x_col for i in range(len(lineX))]
+    line_setX = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(pointsX),
+        lines=o3d.utility.Vector2iVector(lineX)
+    )
+    line_setX.colors = o3d.utility.Vector3dVector(colorsX)
+
+    colorsY = [y_col for i in range(len(lineY))]
+    line_setY = o3d.geometry.LineSet(
+        points=o3d.utility.Vector3dVector(pointsY),
+        lines=o3d.utility.Vector2iVector(lineY)
+    )
+    line_setY.colors = o3d.utility.Vector3dVector(colorsY)
+    return [line_setX, line_setY]</code></pre>
+</details>
+</dd>
+<dt id="projector.load_k"><code class="name flex">
+<span>def <span class="ident">load_k</span></span>(<span>path_k) ‑> utils.Tmat.TMat</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load the camera calibration matrix from a file</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>path_k</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to the file containing the camera calibration matrix</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>TMat</code></dt>
+<dd>The camera calibration matrix</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_k(path_k) -&gt; TMat:
+    &#34;&#34;&#34;Load the camera calibration matrix from a file
+    
+    Args:
+        path_k (str): Path to the file containing the camera calibration matrix
+
+    Returns:
+        TMat: The camera calibration matrix
+    &#34;&#34;&#34;
+    k = np.load(path_k)
+    kmat = TMat()
+    kmat4 = np.identity(4)
+    kmat4[:3, :3] = k
+    kmat.set(kmat4)
+    return kmat</code></pre>
+</details>
+</dd>
+<dt id="projector.project_BBox2DOnPlane"><code class="name flex">
+<span>def <span class="ident">project_BBox2DOnPlane</span></span>(<span>plane: utils.plucker.plkrPlane, bbox: utils.bbox.Bbox2D, kMat: utils.Tmat.TMat, sensorT: utils.Tmat.TMat, fpSizeMax=None, vMat: utils.Tmat.TMat = None, vbbox3d: utils.bbox.Bbox3D = None, debug=None) ‑> List[utils.vector.vec2]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Project a 2D bounding box on a plane (typically, the ground plane)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>plane</code></strong> :&ensp;<code>plkrPlane</code></dt>
+<dd>The plane to project the bounding box on</dd>
+<dt><strong><code>bbox</code></strong> :&ensp;<code>Bbox2D</code></dt>
+<dd>The bounding box to project</dd>
+<dt><strong><code>kMat</code></strong> :&ensp;<code>TMat</code></dt>
+<dd>The camera calibration matrix</dd>
+<dt><strong><code>sensorT</code></strong> :&ensp;<code>TMat</code></dt>
+<dd>The pose of the sensor</dd>
+<dt><strong><code>fpSizeMax</code></strong> :&ensp;<code>vec2</code>, optional</dt>
+<dd>The maximum size of the projected bounding box. If None, no limit are given. Defaults to None.</dd>
+<dt><strong><code>vMat</code></strong> :&ensp;<code>TMat</code>, optional</dt>
+<dd>The pose of the vehicle. If None, the vehicle is ignored. Defaults to None.</dd>
+<dt><strong><code>vbbox3d</code></strong> :&ensp;<code>Bbox3D</code>, optional</dt>
+<dd>The 3D bounding box of the vehicle. If None, the vehicle is placed at the origin Defaults to None.</dd>
+<dt><strong><code>debug</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Display open3d window. Defaults to None.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[vec2]</code></dt>
+<dd>The points of projected bounding box</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def project_BBox2DOnPlane(plane:plkrPlane, 
+                          bbox:Bbox2D, 
+                          kMat:TMat, 
+                          sensorT:TMat, 
+                          fpSizeMax=None, 
+                          vMat:TMat = None, 
+                          vbbox3d:Bbox3D = None, 
+                          debug = None) -&gt; List[vec2]:
+
+    &#34;&#34;&#34;
+    Project a 2D bounding box on a plane (typically, the ground plane)
+
+    Args:
+        plane (plkrPlane): The plane to project the bounding box on
+        bbox (Bbox2D): The bounding box to project
+        kMat (TMat): The camera calibration matrix
+        sensorT (TMat): The pose of the sensor
+        fpSizeMax (vec2, optional): The maximum size of the projected bounding box. If None, no limit are given. Defaults to None.
+        vMat (TMat, optional): The pose of the vehicle. If None, the vehicle is ignored. Defaults to None.
+        vbbox3d (Bbox3D, optional): The 3D bounding box of the vehicle. If None, the vehicle is placed at the origin Defaults to None.
+        debug (bool, optional): Display open3d window. Defaults to None.
+
+    Returns:
+        List[vec2]: The points of projected bounding box
+    &#34;&#34;&#34;
+    invK = deepcopy(kMat)
+    invK.inv()
+    # print(invK)
+
+    cwTc = getCwTc()
+    wTcw = sensorT
+    wTc = wTcw * cwTc
+
+    bboxlabel = bbox.get_label()
+
+
+    pts4 = [pt2.vec4(z=1) for pt2 in bbox.get_pts()]
+    pts_ip_c = [((invK * p).vec3() * 120).vec4() for p in pts4]
+    pts_ip_c_ctrl = [invK * p for p in pts4]
+    pts_ip_cw = [(wTc * pt4) for pt4 in pts_ip_c]
+    pts_ip_cw_ctrl = [(wTc * pt4) for pt4 in pts_ip_c_ctrl]
+
+
+    out_pts:List[vec4] = []
+
+    for i, pt in enumerate(pts_ip_cw):
+        # check if the line points toward the sky.
+        if pt.z() &lt; pts_ip_cw_ctrl[i].z():
+            line = plkrLine(wTc.get_translation(), pts_ip_cw[i]) 
+            out_pts.append(plane.intersect(line))
+        
+        # if so, take the point outside the map and fix its height to 0
+        # Yes, this is a cheat trick.
+        else:
+            p = vec4(x=pt.x(), y=pt.y(), z=0)
+            out_pts.append(p)
+
+    # lines = [plkrLine(wTc.get_translation(), pt4) for pt4 in pts_ip_cw]
+    # out_pts = [plane.intersect(line) for line in lines]
+    # Normalize the points to a correct position in the map
+    for i, pt in enumerate(out_pts):
+        pt.normalize()
+        if debug != None:
+            print(pt)
+    
+    #convert from vec4 to vec2
+    out_pts = [pt4.vec3() for pt4 in out_pts]
+    out_pts = [pt3.vec2() for pt3 in out_pts]
+
+    output:List[Tuple(List[vec2], str)] = []
+
+
+    # Reduce the footprint in function of the class
+    if fpSizeMax != None and bboxlabel in fpSizeMax:
+        sPos = sensorT.get_translation()
+        output.append((out_pts, &#39;unknown&#39;))
+        # get the closest point distance 
+        dmin = np.inf
+        for pt in out_pts:
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d &lt; dmin:
+                dmin = d
+
+        # get distance max in function of the class
+        dmax = dmin+fpSizeMax[bboxlabel]
+        
+        # crop the footprint
+        for i,pt in enumerate(out_pts):
+            v = vec3(x=(pt.x()-sPos.x()), y=(pt.y()-sPos.y()), z=1)
+            d = v.get_norm()
+            if d &gt; dmax:
+                k = dmax / d
+                v = vec3(x=k*v.x(), y=k*v.y(), z=1)
+                vout = vec2(x=v.x()+sPos.x(), y=v.y()+sPos.y())
+                out_pts[i] = vout
+        output.append((out_pts, bboxlabel))
+    else:
+        output.append((out_pts, bboxlabel))
+
+
+    # if not in debug, break and return
+    if debug == None or debug == False:
+        return output
+
+
+    mesh_world = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1, origin=[0, 0, 0])
+    mesh_camera.transform(wTc.get())
+
+    mesh_ip_c = [o3d.geometry.TriangleMesh.create_sphere(radius=0.1) for pt in pts_ip_c]
+    for idx, mesh in enumerate(mesh_ip_c):
+        mesh.paint_uniform_color([0.1, 0.1, 0.8])
+        T = np.identity(4)
+        T[:3, 3] = np.transpose(pts_ip_c[idx].get())[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    
+    mesh_ip_cw = [o3d.geometry.TriangleMesh.create_sphere(radius=0.3) for pt in pts_ip_cw]
+    for idx, mesh in enumerate(mesh_ip_cw):
+        mesh.paint_uniform_color([0.1, 0.1, 1.0])
+        T = np.identity(4)
+        T[:3, 3] = np.transpose(pts_ip_cw[idx].get())[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    mesh_out_pts = [o3d.geometry.TriangleMesh.create_sphere(radius=0.5) for pt in out_pts]
+    for idx, mesh in enumerate(mesh_out_pts):
+        mesh.paint_uniform_color([0.8, 0.1, 0.1])
+        T = np.identity(4)
+        a = np.transpose(out_pts[idx].get())
+        T[:2, 3] = a[0,:3]
+        # print(T)
+        mesh.transform(T)
+
+    carMesh = None
+    if(vMat != None):
+        if(vbbox3d == None):
+            carMesh = o3d.geometry.TriangleMesh.create_sphere(radius=1)
+        else:
+            carMesh = o3d.geometry.TriangleMesh.create_box(width=vbbox3d.get_size().x(), height=vbbox3d.get_size().z(), depth=vbbox3d.get_size().y())
+            T = np.identity(4)
+            T[0, 3] = -vbbox3d.get_size().x()/2.0 + vbbox3d.get_pose().x()
+            T[1, 3] = -vbbox3d.get_size().y()/2.0 + vbbox3d.get_pose().y()
+            T[2, 3] = -vbbox3d.get_size().z()/2.0 + vbbox3d.get_pose().z()
+            carMesh.transform(T)
+    carMesh.transform(vMat.get())
+    carMesh.paint_uniform_color([0.0, 0.5, 0.1])
+
+    o3d.visualization.draw(get_o3dgrid() + [mesh_world, mesh_camera] + mesh_ip_c + mesh_ip_cw + [carMesh] + mesh_out_pts)
+    return out_pts</code></pre>
+</details>
+</dd>
+<dt id="projector.projector_filter"><code class="name flex">
+<span>def <span class="ident">projector_filter</span></span>(<span>bbox: utils.bbox.Bbox3D, vPose: utils.Tmat.TMat, k: utils.Tmat.TMat, sensorT: utils.Tmat.TMat, img, threashold: float = 0.3) ‑> Tuple[utils.bbox.Bbox2D, List[utils.vector.vec2]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Project a 3D bounding box to the image plane and filter out the points that are not in the image or occluded</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>bbox</code></strong> :&ensp;<code>Bbox3D</code></dt>
+<dd>The bounding box to project</dd>
+<dt><strong><code>vPose</code></strong> :&ensp;<code>TMat</code></dt>
+<dd>The pose of the vehicle</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>TMat</code></dt>
+<dd>The camera calibration matrix</dd>
+<dt><strong><code>sensorT</code></strong> :&ensp;<code>TMat</code></dt>
+<dd>the pose of the sensor</dd>
+<dt><strong><code>img</code></strong> :&ensp;<code>np.array</code></dt>
+<dd>The image to project the bounding box on</dd>
+<dt><strong><code>threashold</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>The threshold for occlusion. Defaults to 0.3.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[Bbox2D, List[vec2]]</code></dt>
+<dd>The projected bounding box and the list of points that are not occluded</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def projector_filter(bbox:Bbox3D, vPose:TMat, k:TMat, sensorT:TMat, img, threashold:float = 0.3) -&gt; Tuple[Bbox2D, List[vec2]]:
+    &#34;&#34;&#34;
+    Project a 3D bounding box to the image plane and filter out the points that are not in the image or occluded
+    
+    Args:
+        bbox (Bbox3D): The bounding box to project
+        vPose (TMat): The pose of the vehicle
+        k (TMat): The camera calibration matrix
+        sensorT (TMat): the pose of the sensor
+        img (np.array): The image to project the bounding box on
+        threashold (float, optional): The threshold for occlusion. Defaults to 0.3.
+
+    Returns:
+        Tuple[Bbox2D, List[vec2]]: The projected bounding box and the list of points that are not occluded
+    &#34;&#34;&#34;
+    out_bbox = Bbox2D(vec2(0, 0), vec2(5, 5), label=bbox.label)
+    
+    cwTc = getCwTc()
+    wTc = sensorT * cwTc
+    wTc.inv()
+
+    pts_c:List[vec4] = [pt3.vec4() for pt3 in bbox.get_pts()]
+    pts_w:List[vec4] = [vPose * pt4 for pt4 in pts_c]
+    pts_cam:List[vec4] = [wTc * pt4 for pt4 in pts_w]
+    pts_proj:List[vec4] = [k * pt4 for pt4 in pts_cam]
+    pts_2d:List[vec2] = [pt3.nvec2() for pt3 in [pt4.vec3() for pt4 in pts_proj]]
+
+    for i in range(len(pts_2d)):
+        if pts_proj[i].z() &lt;= 0:
+            return None
+
+    out_bbox.set_from_pts(pts_2d)
+
+    (h, w, c) = img.shape
+    center:vec2 = out_bbox.get_pose() + (out_bbox.get_size() / 2.0)
+    if not (center.x() &gt;= 0.0 and center.x() &lt;= w and center.y() &gt;= 0.0 and center.y() &lt;= h):
+        return None
+    #     pass
+    #     # return out_bbox
+    # else:
+    #     return None
+
+    posebbox = out_bbox.get_pose()
+    sizebbox = out_bbox.get_size()
+
+    cropped_img = img[int(posebbox.y()):int(posebbox.y()+sizebbox.y()), 
+                      int(posebbox.x()):int(posebbox.x()+sizebbox.x()), 
+                      2]
+    
+    try:
+        # vehicle : 10
+        # pedestrian : 4
+        todetect = 10 if bbox.get_label() == &#34;vehicle&#34; else 4
+        unique, counts = np.unique(cropped_img, return_counts=True)
+        pix = dict(zip(unique, counts))
+        N_detected = pix[todetect]
+        ratio = N_detected / cropped_img.size
+        # print(f&#39;In {cropped_img.size} pix, deteceted {pix} with {N_detected} of {bbox.get_label()} with a ratio of {ratio*100.0}%&#39;)
+    except:
+        return None
+    if ratio &lt;= threashold:
+        return None
+    return (out_bbox, pts_2d)</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="projector.getCwTc" href="#projector.getCwTc">getCwTc</a></code></li>
+<li><code><a title="projector.get_o3dgrid" href="#projector.get_o3dgrid">get_o3dgrid</a></code></li>
+<li><code><a title="projector.load_k" href="#projector.load_k">load_k</a></code></li>
+<li><code><a title="projector.project_BBox2DOnPlane" href="#projector.project_BBox2DOnPlane">project_BBox2DOnPlane</a></code></li>
+<li><code><a title="projector.projector_filter" href="#projector.projector_filter">projector_filter</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

@@ -16,6 +16,9 @@ TFPN_LUT = {'TP': 0, 'TN': 1, 'FP': 2, 'FN': 3}
 # Prepare metrics recordings 
 fieldsname = ['frame', 'mIoU', 'mF1', 'occup_IoU', 'occup_F1', 'Vehicle_IoU', 'Terrain_F1', 'Vehicle_F1', 'Pedestrian_IoU', 'Terrain_IoU', 'Pedestrian_F1', 'Terrain_CR', 'Vehicle_CR', 'occup_CR', 'Pedestrian_CR']
 
+# fpSizeMax = {'vehicle': 6.00, 'pedestrian': 1.00}
+fpSizeMax = None
+
 
 args = argparser.parse_args()
 pool = Pool(cpu_count())

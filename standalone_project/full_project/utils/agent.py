@@ -9,7 +9,7 @@ import cv2 as cv
 from tqdm import tqdm
 
 
-import standalone_project.full_project.utils.projector as prj
+import utils.projector as prj
 import matplotlib.pyplot as plt
 
 class Agent:
@@ -144,6 +144,9 @@ class Agent:
 
 
     def get_visible_bbox(self, frame:int, plot:plt = None, drawBBOXonImg=False) -> Tuple[List[Bbox2D], TMat, TMat]:
+        """
+        get the visible bounding box from the agent's perspective.
+        """
         self.get_state(frame)
         if self.label == "pedestrian":
             raise Exception("Pedestrian do not have sensors.")

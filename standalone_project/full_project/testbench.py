@@ -118,7 +118,7 @@ def pipeline(state:GUI_State):
         #================== Start debug VY76R5FGY876T574EFU6
         #   Role of debug : print 3D bounding boxes + projected footprints in an image. 
         #                   The image will then be transfered to 
-        state.set_pov(images[0])
+        state.set_pov(images[3])
 
         #================== End debug VY76R5FGY876T574EFU6
         observed_mask = get_nObserved_mask(frame, mask) # Get the observed mask

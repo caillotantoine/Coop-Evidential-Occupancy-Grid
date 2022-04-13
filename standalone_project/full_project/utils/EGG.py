@@ -9,16 +9,35 @@ from ctypes import *
 from scipy.spatial.transform import Rotation as R
 import json
 from copy import deepcopy
+from utils.global_var import fpSizeMax
 
 
 # Evidential Grid Generator
 class EGG:
+    """
+    Evidential Grid Generator
+    """
+    mapsize:int
+    gridsize:int
+    cellsize: float
+
+
     def __init__(self, mapsize: float, gridsize: int) -> None:
         self.mapsize = mapsize
         self.gridsize = gridsize
         self.cellsize = mapsize / float(gridsize)
 
-    def projector_resterizer(self, agent_out:Tuple[List[Bbox2D], TMat, TMat, str], confjsonpath=None):
+    def projector_resterizer(self, agent_out:Tuple[List[Bbox2D], TMat, TMat, str], confjsonpath=None) -> List[Tuple[List[vec2], str]]:
+        """
+        Project the 2D bounding box on the plane
+
+        Args:
+            agent_out: the output of the agent (bbox, Tmat, Tmat, str)
+            confjsonpath: the path of the configuration file
+
+        Returns:
+            a list of projected bounding box and the name of the object
+        """
         (bbox_list, kmat, camT, label, _) = agent_out
         list_fp:List[Tuple[List[vec2], str]] = []
         gndPlane = plkrPlane()
@@ -45,7 +64,8 @@ class EGG:
 
         for bbox in bbox_list:
             # project a bbox as a footprint
-            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00})
+            # fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax={'vehicle': 6.00, 'pedestrian': 1.00})
+            fp = project_BBox2DOnPlane(gndPlane, bbox, kmat, camT, fpSizeMax=fpSizeMax)
 
             # pack everything
             list_fp.extend(fp)

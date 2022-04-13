@@ -1,6 +1,6 @@
 from  utils.global_var import *
 from utils.Tmat import TMat
-from standalone_project.full_project.utils.EGG import EGG
+from utils.EGG import EGG
 from typing import List, Tuple
 from utils.bbox import Bbox2D, Bbox3D
 from utils.vector import vec2, vec4
@@ -56,7 +56,7 @@ def generate_evid_grid(agent_out:Tuple[List[Bbox2D], TMat, TMat, str] = None, ma
 
 
     elif agent_3D != None:
-        # TO DO : Treating 3D bounding box
+        # TODO : Treating 3D bounding box
         mask = np.where(mask == 0, 2, mask)
         for agent in agent_3D:
             bboxsize = agent.get_size()

@@ -21,6 +21,22 @@
             ]
         },
         {
+            "name": "Python: testbench",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/caillot/Documents/PhD/Projets/Coop-Evidential-Occupancy-Grid/standalone_project/full_project/testbench.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: testbench with profiler",
+            "type": "python",
+            "request": "launch",
+            "module": "cProfile",
+            "args": [
+                "-o", "/tmp/tmp.prof", "/home/caillot/Documents/PhD/Projets/Coop-Evidential-Occupancy-Grid/standalone_project/full_project/testbench.py"
+            ]
+        },
+        {
             "name": "g++ - Build and debug active file",
             "type": "cppdbg",
             "request": "launch",

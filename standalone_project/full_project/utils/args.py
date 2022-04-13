@@ -58,7 +58,7 @@ argparser.add_argument(
     help='Ending point in the dataset (default 500).')
 argparser.add_argument(
     '--dataset_path',
-    default='/home/caillot/Documents/Dataset/CARLA_Dataset_intersec_dense',
+    default='/home/caillot/Documents/Dataset/CARLA_Dataset_original',
     help='Path of the dataset.')
 argparser.add_argument(
     '--save_path',
